@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "es2017",
+    "lib": ["ES2017", "DOM"],
+    "outDir": ".",
+    "sourceMap": false,
+    "strict": true,
+    "types": ["node"]
+  },
+  "include": ["examples-typescript.ts"],
+  "exclude": []
+}
