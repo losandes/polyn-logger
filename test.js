@@ -1,21 +1,6 @@
 const { expect } = require('chai')
 const supposed = require('supposed')
-const {
-  Logger,
-  formatters: {
-    BlockFormatter,
-    BunyanFormatter,
-    JsonFormatter,
-    PassThroughFormatter,
-    StringFormatter,
-  },
-  writers: {
-    ArrayWriter,
-    ConsoleWriter,
-    DevConsoleWriter,
-    StdoutWriter,
-  }
-} = require('.')
+const { Logger, formatters, writers } = require('@polyn/logger')
 
 module.exports = supposed.Suite({
   name: 'polyn-logger',
@@ -23,7 +8,7 @@ module.exports = supposed.Suite({
   inject: {
     Logger,
     formatters,
-    writers,  
-  }
+    writers,
+  },
 }).runner()
   .run()
