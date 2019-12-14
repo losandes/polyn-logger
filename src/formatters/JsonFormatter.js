@@ -1,8 +1,10 @@
 module.exports = {
   name: 'JsonFormatter',
-  dependencies: ['error-formatter'],
-  factory: (errorFormatter) => {
+  dependencies: ['@polyn/blueprint', 'error-formatter'],
+  factory: (polynBp, errorFormatter) => {
     'use strict'
+
+    const { is } = polynBp
 
     function JsonFormatter () {
       /**
@@ -14,9 +16,19 @@ module.exports = {
           return resolve(JSON.stringify(meta))
         }
 
+        let _log
+
+        if (is.primitive(log)) {
+          _log = { log: log }
+        } else if (Array.isArray(log)) {
+          _log = { log: errorFormatter.format(log) }
+        } else {
+          _log = errorFormatter.format(log)
+        }
+
         return resolve(JSON.stringify({
           ...meta,
-          ...errorFormatter.format(log),
+          ..._log,
         }))
       })
 

@@ -8,7 +8,7 @@ _What does "event based" mean in the context of logging?_
 
 In my career, most of the logging libraries that I've used either had a static set of verbosities, or were level based (10 is trace, 20 is debug, etc.). Often, they weren't extensible in the way that I needed them to be, so in order to meet product, and project needs, I've consistently done unnaturally complex things to... log information.
 
-_So it this logger complex then?_
+_So is this logger complex then?_
 
 No. It's dead simple. It just follows a flexible event structure, instead of a fixed one. It treats disparate logging needs as a compositional problem.
 
@@ -18,11 +18,11 @@ With @polyn/logger, all of these types of information can be written to the same
 
 As well, code in libraries can write to this logger, and export the logger instance so code that consumes those libraries can choose whether or not to subscribe to the logs, metrics, etc.
 
-Assuming we inject the loggers into our code (deterministic), rather than instantiating them in our code (non-deterministic), **logs become an asset that can be evaluated in our tests, and can even be used to observe code that is not exported (private)**.
+Assuming we inject the loggers into our code (deterministic), rather than instantiating them in our code (non-deterministic), **logs become an asset that can be evaluated in our tests, and can even be used to observe code that is not exported (private)** (i.e. `log('test', { something: 'private or encapsulated' })`).
 
 _Why not use Bunyan_
 
-Bunyan is awesome. This library is both inspired by it, and compatible with the bunyan CLI. It works very well if you need a wide variety of destination support, and need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around bunyan, and you should consider using it.
+Bunyan is awesome. This library is both inspired by it, and compatible with the bunyan CLI. It works very well if you need a wide variety of destination support, and/or need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around bunyan, and you should consider using it.
 
 ## Gettings Started
 
@@ -42,9 +42,10 @@ When creating an instance of Logger, the following properties are supported:
 
 * **name** {string?}: The name of this logger; it's topic; the name of your app, or library (default is "logger")
 * **events** {string[]?}: The events this logger supports (default is: `^(trace|debug|info|warn|error|fatal)$`)
-* **source** {string?}: The source of a given log (default is: 'GLOBAL'). I usually set this using `withSource(__filename)` (per file).
+* **source** {string?}: The source of a given log (default is: 'GLOBAL'). I usually set this using `logger.withSource(__filename)` (per file).
 * **hostname** {string?}: The machine name (default is `os.hostname()` in NodeJS)
 * **pid** {number?}: The process id (default is `process.pid()` in NodeJS)
+* **defaultMode** {`/^(publish|emit)$/`}: whether the logger should "publish" (send-and-wait; default), or "emit" (send-and-move-on) to log subscribers
 
 An instance of Logger returns the following interface:
 
@@ -80,7 +81,15 @@ const events = [
   'fatal'
 ]
 
-const logger = new Logger({ name: 'my-app', events })
+// shown with defaults:
+const logger = new Logger({
+  name: 'logger',
+  events,
+  source: 'GLOBAL',
+  hostname: require('os').hostname(),
+  pid: process.pid(),
+  defaultMode: 'publish'
+})
 const { log } = logger.withSource(__filename)
 ```
 
@@ -117,29 +126,29 @@ const { log } = logger.withSource(__filename)
   // 'audit:warn', or 'local' yet
 
   // we can emit logs using NodeJS' EventEmitter convention
-  log('trace', { hello: 'trace' })
-  log('debug', { hello: 'debug' })
-  log('info', { hello: 'info' })
-  log('warn', { hello: 'warn' })
-  log('error', { hello: 'error' })
-  log('fatal', { hello: 'fatal' })
+  await log('trace', { hello: 'trace' })
+  await log('debug', { hello: 'debug' })
+  await log('info', { hello: 'info' })
+  await log('warn', { hello: 'warn' })
+  await log('error', { hello: 'error' })
+  await log('fatal', { hello: 'fatal' })
 
   // the events that we set on the log options are dynamically
   // added to the `log` function
-  log.trace({ hello: 'trace' })
-  log.debug({ hello: 'debug' })
-  log.info({ hello: 'info' })
-  log.warn({ hello: 'warn' })
-  log.error({ hello: 'error' })
-  log.fatal({ hello: 'fatal' })
+  await log.trace({ hello: 'trace' })
+  await log.debug({ hello: 'debug' })
+  await log.info({ hello: 'info' })
+  await log.warn({ hello: 'warn' })
+  await log.error({ hello: 'error' })
+  await log.fatal({ hello: 'fatal' })
 })()
 ```
 
 ### Writing logs
 
-As seen in "Subscribing to a log topic", we can write logs in two ways: using NodeJS' EventEmitter convention, or using the dynamically added log functions. If you are using TypeScript, the latter is probably what you want because you can write your own typings files that enforce log body for specific events. Otherwise it's developer preference.
+As seen in "Subscribing to a log topic", we can write logs in two ways: using NodeJS' EventEmitter convention, or using the dynamically added log functions. If you are using TypeScript, the latter might be useful because you can write your own typings files that enforce log body types for specific events. Otherwise it's developer preference.
 
-@polyn/logger has no opinion on what a log body is. Logs can be strings, numbers, boolean, objects... whatever, as long as the writer you configure can deal with it.
+@polyn/logger has no opinion on what a log body is. Logs can be strings, numbers, boolean, objects... whatever, as long as the configured writer can deal with it.
 
 ```JavaScript
 const { Logger, formatters, writers } = require('@polyn/logger')
@@ -165,6 +174,14 @@ log.bar({ hello: 'bar' })
 log.str('message here')
 log.more('message', 2, false, { details: 42 }) // multiple args are emitted as an array
 ```
+
+#### Publishing vs. Emitting
+
+See the [@polyn/async-events](https://github.com/losandes/polyn-async-events#polynasync-events) documentation for [Publishing a topic](https://github.com/losandes/polyn-async-events#publishing-to-a-topic), and [Emitting a topic](https://github.com/losandes/polyn-async-events#emitting-to-a-topic) for more detailed information.
+
+**tl;dr**: By default, this logger "publishes" the logs (send-and-wait), which means that it waits for subscribers to finish their work before moving on. This is optimized for logging to the console. If you are writing to streams, or other systems, you might prefer to emit the logs instead (send-and-move-on). You can set the default behavior to `defaultMode: 'emit'` when creating an instance of `Logger`. Regardless of the mode, you can always control the behavior using the `log.publish`, and `log.emit` functions.
+
+See [Cookbook: Measuring counts, or gauges with logs](#cookbook-measuring-counts-or-gauges-with-logs), or [Cookbook: Measuring duration / latency with logs](#cookbook-measuring-duration--latency-with-logs) for an examples that use both `emit`, and `publish`.
 
 ### Available writers, and formatters
 
@@ -336,24 +353,26 @@ const gauges = gaugeWriter()
     new DevConsoleWriter({ formatter: new BlockFormatter() })
   )
 
-  await log('count', { name: 'foo' })
-  await log('count', { name: 'bar' })
-  await log('count', { name: 'foo' })
+  // we don't need to wait for counts to be written/updated
+  await log.emit('count', { name: 'foo' })
+  await log.emit('count', { name: 'bar' })
+  await log.emit('count', { name: 'foo' })
 
-  await log('metrics', counts.getCount('foo'))
-  await log('metrics', counts.getCount('bar'))
+  await log.emit('metrics', counts.getCount('foo'))
+  await log.emit('metrics', counts.getCount('bar'))
 
-  await log('gauge:increase', { name: 'foo' })
-  await log('gauge:increase', { name: 'bar' })
-  await log('gauge:increase', { name: 'foo' })
+  // we do need to wait for gauges to be written/updated for them to be accurate
+  await log.publish('gauge:increase', { name: 'foo' })
+  await log.publish('gauge:increase', { name: 'bar' })
+  await log.publish('gauge:increase', { name: 'foo' })
 
-  await log('metrics', gauges.getGauge('foo'))
-  await log('metrics', gauges.getGauge('bar'))
+  await log.publish('metrics', gauges.getGauge('foo'))
+  await log.publish('metrics', gauges.getGauge('bar'))
 
-  await log('gauge:decrease', { name: 'foo' })
+  await log.publish('gauge:decrease', { name: 'foo' })
 
-  await log('metrics', gauges.getGauge('foo'))
-  await log('metrics', gauges.getGauge('bar'))
+  await log.publish('metrics', gauges.getGauge('foo'))
+  await log.publish('metrics', gauges.getGauge('bar'))
 })()
 ```
 
@@ -404,15 +423,19 @@ const { log } = logger.withSource(__filename)
   await logger.subscribe(['latency:start', 'latency:end'], latencyWriter())
   await logger.subscribe(
     ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
-    new DevConsoleWriter({ formatter: new BlockFormatter() })
+    new DevConsoleWriter({ formatter: new BlockFormatter() }),
   )
 
-  log('trace', { hello: 'trace' })
+  await log.publish('trace', { hello: 'trace' })
   // prints: TRACE::1576081604801::/polyn-logger/test.manual.js
-  const start = await log('latency:start', { hello: 'latency' })
+
+  // we need to wait for latency to be started for this to be accurate
+  const start = await log.publish('latency:start', { hello: 'latency' })
   // does not print
-  setTimeout(() => {
-    log('latency:end', start)
+
+  setTimeout(async () => {
+    // we don't need to wait for latency end events to publish, though
+    await log.emit('latency:end', start)
     // prints: LATENCY (duration: 30) { hello: 'latency' }
   }, 30)
 })()

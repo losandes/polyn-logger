@@ -12,19 +12,6 @@ const {
   DevConsoleWriter,
   StdoutWriter,
 } = writers
-const events = [
-  'local',
-  'local2',
-  'trace',
-  'trace2',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'fatal',
-]
-const logger = new Logger({ events })
-let log = logger.withSource('@polyn/logger README').log
 
 const arrayWriter = new ArrayWriter({ formatter: new StringFormatter() })
 const customWriter = () => {
@@ -43,13 +30,26 @@ const _writers = [
   /* 2 */ new ConsoleWriter({ formatter: new PassThroughFormatter() }),
   /* 3 */ new StdoutWriter({ formatter: new StringFormatter() }),
   /* 4 */ new StdoutWriter({ formatter: new JsonFormatter() }),
-  /* 5 */ new StdoutWriter({ formatter: new BunyanFormatter(events) }),
+  /* 5 */ (events) => new StdoutWriter({ formatter: new BunyanFormatter(events) }),
   /* 6 */ arrayWriter,
   /* 7 */ customWriter(),
 ]
 
+// standard fare
 ;(async () => {
   try {
+    const events = [
+      'local',
+      'local2',
+      'trace',
+      'trace2',
+      'debug',
+      'info',
+      'warn',
+      'error',
+      'fatal',
+    ]
+    const logger = new Logger({ events, defaultMode: 'emit' })
     await logger.subscribe([
       'local',
       'local2',
@@ -61,34 +61,80 @@ const _writers = [
       'error',
       'fatal',
     ], _writers[0])
-
     // setTimeout(() => { console.log(arrayWriter.history) }, 100)
 
-    log('local', { hello: 'local' })
-    log('local2', { hello: 'local2' })
-    log('trace', { hello: 'trace' })
-    log('trace2')
-    log('debug', { hello: 'debug' })
-    log('info', { hello: 'info' })
-    log('warn', { hello: 'warn' })
-    log('error', new Error('error!'))
-    log('fatal', new Error('fatal!'))
+    const writeLogs = async ({ log }) => {
+      await log('local', { hello: 'log(local)' })
+      await log('local2', { hello: 'log(local2)' })
+      await log('trace', { hello: 'log(trace)' })
+      await log('trace2')
+      await log('debug', { hello: 'log(debug)' })
+      await log('info', { hello: 'log(info)' })
+      await log('warn', { hello: 'log(warn)' })
+      await log('error', new Error('log(error!)'))
+      await log('fatal', new Error('log(fatal!)'))
+      await log.local({ hello: 'log.local' })
+      await log.local2({ hello: 'log.local2' })
+      await log.trace({ hello: 'log.trace' })
+      await log.debug({ hello: 'log.debug' })
+      await log.info({ hello: 'log.info' })
+      await log.warn({ hello: 'log.warn' })
+      await log.error({ err: new Error('log.error!') })
+      await log.fatal({ err: new Error('log.fatal!') })
+    }
 
-    log = logger.withSource('changed source!').log
-
-    log.local({ hello: 'local' })
-    log.local2({ hello: 'local2' })
-    log.trace({ hello: 'trace' })
-    log.debug({ hello: 'debug' })
-    log.info({ hello: 'info' })
-    log.warn({ hello: 'warn' })
-    log.error({ err: new Error('error!') })
-    log.fatal({ err: new Error('fatal!') })
+    await writeLogs(logger.withSource('@polyn/logger README 1'))
+    await writeLogs(logger.withSource('@polyn/logger README 2'))
   } catch (e) {
     console.log('test.manual', e)
   }
 })()
 
+// multiple parameters, and parameter types
+;(async () => {
+  // the events this instance will support
+  const events = ['foo', 'bar', 'str', 'more', 'err']
+
+  const logger = new Logger({ name: 'my-app', events })
+  await logger.subscribe(events, _writers[0]) // _writers[5](events))
+  // setTimeout(() => { console.log(arrayWriter.history) }, 100)
+
+  const test = async ({ log }) => {
+    // we can emit logs using NodeJS' EventEmitter convention
+    await log('foo', { hello: 'foo' })
+    await log('bar', { hello: 'bar' })
+    await log('str', 'message here')
+    await log('more', 'message', 9, true, { details: 42 }, new Error('boom')) // multiple args are emitted as an array
+    await log('err', new Error('BOOM!'))
+
+    // the events that we set on the log options are dynamically
+    // added to the `log` function
+    await log.foo({ hello: 'foo' })
+    await log.bar({ hello: 'bar' })
+    await log.str('message here')
+    await log.more('message', ...[2, false, { details: 42 }, new Error('boom')]) // multiple args are emitted as an array
+    await log.err({ foo: 'bar', err: new Error('BOOM2!') })
+  }
+
+  test(logger.withSource(__filename))
+  test(logger.withSource('two'))
+})()
+
+// publish / emit
+;(async () => {
+  try {
+    const logger = new Logger({ name: 'publish/emit', events: ['info'] })
+    await logger.subscribe(['info'], _writers[0])
+    const { log } = logger.withSource('publish/emit')
+
+    log.publish('info', { hello: 'publish:info' })
+    log.emit('info', { hello: 'emit:info' })
+  } catch (e) {
+    console.log('test.manual/publish-emit', e)
+  }
+})()
+
+// metrics: counts & gauges
 ;(async () => {
   const countWriter = () => {
     const counts = {}
@@ -139,27 +185,29 @@ const _writers = [
       new DevConsoleWriter({ formatter: new BlockFormatter() }),
     )
 
-    await log('count', { name: 'foo' })
-    await log('count', { name: 'bar' })
-    await log('count', { name: 'foo' })
+    // we don't need to wait for counts to be written/updated
+    await log.emit('count', { name: 'foo' })
+    await log.emit('count', { name: 'bar' })
+    await log.emit('count', { name: 'foo' })
 
-    await log('metrics', counts.getCount('foo'))
-    await log('metrics', counts.getCount('bar'))
+    await log.emit('metrics', counts.getCount('foo'))
+    await log.emit('metrics', counts.getCount('bar'))
 
-    await log('gauge:increase', { name: 'foo' })
-    await log('gauge:increase', { name: 'bar' })
-    await log('gauge:increase', { name: 'foo' })
+    // we do need to wait for gauges to be written/updated for them to be accurate
+    await log.publish('gauge:increase', { name: 'bar' })
+    await log.publish('gauge:increase', { name: 'foo' })
 
-    await log('metrics', gauges.getGauge('foo'))
-    await log('metrics', gauges.getGauge('bar'))
+    await log.publish('metrics', gauges.getGauge('foo'))
+    await log.publish('metrics', gauges.getGauge('bar'))
 
-    await log('gauge:decrease', { name: 'foo' })
+    await log.publish('gauge:decrease', { name: 'foo' })
 
-    await log('metrics', gauges.getGauge('foo'))
-    await log('metrics', gauges.getGauge('bar'))
+    await log.publish('metrics', gauges.getGauge('foo'))
+    await log.publish('metrics', gauges.getGauge('bar'))
   })()
 })()
 
+// metrics: latency
 ;(async () => {
   const latencyWriter = () => {
     const latencies = {}
@@ -195,12 +243,16 @@ const _writers = [
       new DevConsoleWriter({ formatter: new BlockFormatter() }),
     )
 
-    log('trace', { hello: 'trace' })
+    await log.publish('trace', { hello: 'trace' })
     // prints: TRACE::1576081604801::/polyn-logger/test.manual.js
-    const start = await log('latency:start', { hello: 'latency' })
+
+    // we need to wait for latency to be started for this to be accurate
+    const start = await log.publish('latency:start', { hello: 'latency' })
     // does not print
-    setTimeout(() => {
-      log('latency:end', start)
+
+    setTimeout(async () => {
+      // we don't need to wait for latency end events to publish, though
+      await log.emit('latency:end', start)
       // prints: LATENCY (duration: 30) { hello: 'latency' }
     }, 30)
   })()

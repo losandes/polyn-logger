@@ -1,9 +1,10 @@
 module.exports = {
   name: 'StringFormatter',
-  dependencies: ['error-formatter'],
-  factory: (errorFormatter) => {
+  dependencies: ['@polyn/blueprint', 'error-formatter'],
+  factory: (polynBp, errorFormatter) => {
     'use strict'
 
+    const { is } = polynBp
     const DELIMITER = '::'
 
     function StringFormatter () {
@@ -12,11 +13,9 @@ module.exports = {
        * @param log the log to format
        */
       const format = (log, meta) => new Promise((resolve) => {
-        let message
+        let message = ''
 
-        if (errorFormatter.isError(log)) {
-          message = `${log.message}::\n    ${log.stack}`
-        } else if (typeof log !== 'object') {
+        if (is.primitive(log)) {
           message = log
         } else if (log) {
           message = JSON.stringify(errorFormatter.format(log))
