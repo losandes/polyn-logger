@@ -12,7 +12,13 @@ module.exports = {
       name: optional('string').withDefault('logger'),
       events: optional('string[]').from(({ value }) => {
         if (Array.isArray(value)) {
-          return value.map((val) => val.trim())
+          const values = value.map((val) => val.trim())
+
+          if (values.includes('publish') || values.includes('emit')) {
+            throw new Error('Invalid Logger Options: the following event names are protected, and cannot be configured: "publish", "emit"')
+          }
+
+          return values
         }
 
         return ['trace', 'debug', 'info', 'warn', 'error', 'fatal']
@@ -20,12 +26,28 @@ module.exports = {
       source: 'string?',
       hostname: 'string?',
       pid: 'number?',
+      defaultMode: optional(/^(publish|emit)$/).withDefault('publish')
     })
 
-    function Logger (input) {
-      const options = new LoggerOptions(input)
-      const logTopic = (input && input.__logTopic) || new Topic({ topic: options.name })
+    /**
+     * @param input - the unsanitized input (so we can use references)
+     */
+    const makeOptions = (input) => {
+      let logTopic, options
 
+      if (input && input.__logTopic) {
+        options = new LoggerOptions(input)
+        logTopic = (input && input.__logTopic)
+      } else {
+        options = new LoggerOptions(input)
+        logTopic = new Topic({ topic: options.name })
+      }
+
+      return { logTopic, options }
+    }
+
+    function Logger (input) {
+      const { logTopic, options } = makeOptions(input)
       const withSource = (source) => new Logger({
         ...input,
         ...{
@@ -56,8 +78,8 @@ module.exports = {
       const unsubscribe = logTopic.unsubscribe
       const LogMeta = LogMetaFactory(options)
 
-      const _log = (event) => {
-        return (...body) => logTopic.publish(
+      const _log = (action) => (event) => {
+        return (...body) => action(
           event,
           body && body.length === 1 ? body[0] : body, // support multiple params, but don't muddy up single params
           new LogMeta({
@@ -67,11 +89,14 @@ module.exports = {
         )
       }
 
-      const log = (event, body) => _log(event)(body)
+      const log = (event, body) => _log(logTopic[options.defaultMode])(event)(body)
 
       options.events.forEach((event) => {
-        log[event] = _log(event)
+        log[event] = _log(logTopic[options.defaultMode])(event)
       })
+
+      log.publish = (event, body) => _log(logTopic.publish)(event)(body)
+      log.emit =    (event, body) => _log(logTopic.emit)(event)(body)
 
       return { name: options.name, withSource, subscribe, unsubscribe, log }
     }

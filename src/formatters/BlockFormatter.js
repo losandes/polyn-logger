@@ -1,7 +1,7 @@
 module.exports = {
   name: 'BlockFormatter',
-  dependencies: ['ConsoleStyles', 'error-formatter'],
-  factory: (ConsoleStyles, errorFormatter) => {
+  dependencies: ['ConsoleStyles'],
+  factory: (ConsoleStyles) => {
     'use strict'
 
     const DELIMITER = '::'
@@ -24,14 +24,15 @@ module.exports = {
       }
     }
 
-    const makeDetails = (log) => {
-      if (!log) {
-        return log
-      }
-
-      const clone = errorFormatter.format(log)
-      return typeof clone !== 'object' ? { message: clone } : clone
-    }
+    const makeDetails = (log) => log
+    // {
+    //   if (!log) {
+    //     return log
+    //   }
+    //
+    //   const clone = errorFormatter.format(log)
+    //   return typeof clone !== 'object' ? { message: clone } : clone
+    // }
 
     function BlockFormatter (options) {
       const { consoleStyles } = new ConsoleStyles(options)

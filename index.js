@@ -6,12 +6,12 @@ const immutable = require('@polyn/immutable')
 // formatters
 const { ConsoleStyles } = require('./src/formatters/ConsoleStyles').factory(blueprint, immutable)
 const { validateFormatter } = require('./src/formatters/validate-formatter').factory(blueprint)
-const { errorFormatter } = require('./src/formatters/error-formatter').factory()
-const { BlockFormatter } = require('./src/formatters/BlockFormatter').factory(ConsoleStyles, errorFormatter)
+const { errorFormatter } = require('./src/formatters/error-formatter').factory(blueprint)
+const { BlockFormatter } = require('./src/formatters/BlockFormatter').factory(ConsoleStyles)
 const { BunyanFormatter } = require('./src/formatters/BunyanFormatter').factory(errorFormatter)
-const { JsonFormatter } = require('./src/formatters/JsonFormatter').factory(errorFormatter)
+const { JsonFormatter } = require('./src/formatters/JsonFormatter').factory(blueprint, errorFormatter)
 const { PassThroughFormatter } = require('./src/formatters/PassThroughFormatter').factory()
-const { StringFormatter } = require('./src/formatters/StringFormatter').factory(errorFormatter)
+const { StringFormatter } = require('./src/formatters/StringFormatter').factory(blueprint, errorFormatter)
 
 const formatters = {
   BlockFormatter,
@@ -42,7 +42,7 @@ const { Logger } = require('./src/Logger').factory(
   immutable,
   events,
   LogMetaFactory,
-  validateWriter
+  validateWriter,
 )
 
 module.exports = { Logger, formatters, writers }
