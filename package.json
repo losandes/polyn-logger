@@ -1,6 +1,6 @@
 {
   "name": "@polyn/logger",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "An async, event based logger for NodeJS",
   "main": "index.js",
   "types": "index.d.ts",
@@ -17,7 +17,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@polyn/async-events": "~0.1.0",
+    "@polyn/async-events": "~0.2.0",
     "@polyn/blueprint": "~2.5.1",
     "@polyn/immutable": "~1.0.7"
   },
