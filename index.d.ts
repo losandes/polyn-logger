@@ -3,6 +3,7 @@
 // Definitions by: Andy Wright <https://github.com/losandes>
 // TypeScript Version: 2.1
 
+import * as EventEmitter from 'events'
 import { ISubscriptionResult, IEventOutput } from '@polyn/async-events'
 
 export interface ILogMeta {
@@ -13,6 +14,17 @@ export interface ILogMeta {
   source: string;
   hostname: string;
   pid: number;
+}
+
+export interface ILogEmitterMeta {
+  event: string;
+  category: string;
+  level: number;
+  source: string;
+  time: number;
+  hostname: string;
+  pid: number;
+  context?: any;
 }
 
 export interface ILogFormatter {
@@ -29,6 +41,15 @@ export interface ILoggerOptions {
   source?: string;
   hostname?: string;
   pid?: number;
+}
+
+export interface ILogEmitterOptions {
+  source?: string;
+  hostname?: string;
+  pid?: number;
+  wildcardEvent?: string;
+  noListenersEvent?: string;
+  context?: any;
 }
 
 /**
@@ -107,4 +128,11 @@ declare namespace writers {
     constructor(options: { formatter: ILogFormatter });
     write (log: any, meta: ILogMeta): Promise<void>;
   }
+}
+
+declare class LogEmitter extends EventEmitter {
+  constructor(options: ILogEmitterOptions | any);
+  emit(event: string | symbol, level: string, ...args: any[]): boolean;
+  pipe(meta: ILogEmitterMeta, ...args: any[]): boolean;
+  child(options: ILogEmitterOptions): LogEmitter;
 }

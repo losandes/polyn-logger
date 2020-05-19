@@ -5,22 +5,22 @@ module.exports = {
     'use strict'
 
     const DELIMITER = '::'
-    const prettifyVerbosityFactory = (styles) => (event) => {
-      switch (event) {
+    const prettifyVerbosityFactory = (styles) => (category) => {
+      switch (category) {
         case 'trace':
-          return styles.bgWhite(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgWhite(styles.black(` ${category.toUpperCase()} `))
         case 'debug':
-          return styles.bgGreen(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgGreen(styles.black(` ${category.toUpperCase()} `))
         case 'info':
-          return styles.bgBlue(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgBlue(styles.black(` ${category.toUpperCase()} `))
         case 'warn':
-          return styles.bgYellow(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgYellow(styles.black(` ${category.toUpperCase()} `))
         case 'error':
-          return styles.bgRed(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgRed(styles.black(` ${category.toUpperCase()} `))
         case 'fatal':
-          return styles.bgMagenta(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgMagenta(styles.black(` ${category.toUpperCase()} `))
         default:
-          return styles.bgWhite(styles.black(` ${event.toUpperCase()} `))
+          return styles.bgWhite(styles.black(` ${category.toUpperCase()} `))
       }
     }
 
@@ -43,8 +43,12 @@ module.exports = {
        * @param log the log to format
        */
       const format = (log, meta) => new Promise((resolve) => {
+        const entryParts = meta.category === meta.event
+          ? [prettifyVerbosity(meta.category), meta.time, meta.source]
+          : [prettifyVerbosity(meta.category), meta.event, meta.time, meta.source]
+
         return resolve({
-          entry: [prettifyVerbosity(meta.event), meta.time, meta.source].join(DELIMITER),
+          entry: entryParts.join(DELIMITER),
           details: makeDetails(log),
         })
       })
