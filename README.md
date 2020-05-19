@@ -105,16 +105,14 @@ When you have control over the creation of all loggers, creating children is the
 ```JavaScript
 const { LogEmitter, writers, formatters } = require('@polyn/logger')
 const log1 = new LogEmitter()
-const log2 = new LogEmitter()
-const log3 = new LogEmitter()
+const log2 = log1.child()
+const log3 = log2.child()
 const logWriter = new writers.DevConsoleWriter({
   formatter: new formatters.BlockFormatter()
 })
 const writeLog = async (meta, ...args) =>
   logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-log2.on('*', log1.pipe())
-log3.on('*', log1.pipe())
 log1.on('info', writeLog)
 
 log2.emit('log2', 'info', { hello: 'world' })
@@ -128,14 +126,16 @@ When you are consuming `LogEmitters` that were created in other sources, you can
 ```JavaScript
 const { LogEmitter, writers, formatters } = require('@polyn/logger')
 const log1 = new LogEmitter()
-const log2 = log1.child()
-const log3 = log1.child()
+const log2 = new LogEmitter()
+const log3 = new LogEmitter()
 const logWriter = new writers.DevConsoleWriter({
   formatter: new formatters.BlockFormatter()
 })
 const writeLog = async (meta, ...args) =>
   logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
+log2.on('*', log1.pipe())
+log3.on('*', log1.pipe())
 log1.on('info', writeLog)
 
 log2.emit('log2', 'info', { hello: 'world' })

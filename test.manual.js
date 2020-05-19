@@ -470,7 +470,7 @@ const emitterPiping = async () => {
 const emitterChildren = async () => {
   const log1 = new LogEmitter()
   const log2 = log1.child()
-  const log3 = log1.child()
+  const log3 = log2.child()
   const logWriter = new writers.DevConsoleWriter({
     formatter: new formatters.BlockFormatter()
   })
@@ -557,6 +557,7 @@ const rollYourLogWriter = async () => {
   await gettingStarted()
   await emitterPiping()
   await emitterChildren()
-  // await emitterContext()
   await rollYourLogWriter()
+
+  // await emitterContext()
 })()
