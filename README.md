@@ -1,6 +1,6 @@
 # @polyn/logger
 
-@polyn/logger is an async, event based logger for NodeJS.
+@polyn/logger is an event based logger for NodeJS.
 
 ![block-formatter-dev-console-writer](screenshots/block-formatter-dev-console-writer.png)
 
@@ -20,9 +20,9 @@ As well, code in libraries can write to this logger, and export the logger insta
 
 Assuming we inject the loggers into our code (deterministic), rather than instantiating them in our code (non-deterministic), **logs become an asset that can be evaluated in our tests, and can even be used to observe code that is not exported (private)** (i.e. `log('test', { something: 'private or encapsulated' })`).
 
-_Why not use Bunyan_
+_Why not use Bunyan, or Pino_
 
-Bunyan is awesome. This library is both inspired by it, and compatible with the bunyan CLI. It works very well if you need a wide variety of destination support, and/or need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around bunyan, and you should consider using it.
+Bunyan and Pino are awesome. This library is both inspired by them, and can be used with them (i.e. bunyan CLI). Bunyan, and Pino work very well if you need a wide variety of destination support, and/or need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around those libraries, and you should also consider using one of them.
 
 ## Gettings Started
 
@@ -30,158 +30,158 @@ Bunyan is awesome. This library is both inspired by it, and compatible with the 
 > npm install --save @polyn/logger
 ```
 
-## Creating an instance of a logger
+### Creating a LogEmitter
 
-We need to do 2 things when creating an instance of a logger: Create a log topic, and then subscribe to that topic, with a log writer.
+All logs are written to a log emitter, which is an extension of [NodeJS' events API](https://nodejs.org/api/events.html). It overrides the default `emit` with an opinion about what the second argument should be:
 
-### Creating a log topic
+```TypeScript
+/**
+ * Emits an event, with a verbosity level
+ * @param {string | symbol} event - a unique name for the event being emitted
+ * @param {string} category - a verbosity / level / topic for the event
+ *    (i.e. debug, info, error, audit_info, audit_warn, count, gauge, etc.)
+ * @param {any[]} ...args - the value(s) you wish to log
+ */
+emit(event: string | symbol, category: string, ...args: any[]): boolean;
+```
 
-While it's not necessary to create a topic per domain, it's possible to do that. The examples here assume we need only one topic, and that we'll deal with differences in the domains, by subscribing to the topic with different writers.
+```JavaScript
+const { LogEmitter, writers, formatters } = require('@polyn/logger')
+const log = new LogEmitter()
+const logWriter = new writers.DevConsoleWriter({
+  formatter: new formatters.BlockFormatter()
+})
+const writeLog = async (meta, ...args) =>
+  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-When creating an instance of Logger, the following properties are supported:
+// subscribe to a category
+log.on('info', writeLog)
 
-* **name** {string?}: The name of this logger; it's topic; the name of your app, or library (default is "logger")
-* **events** {string[]?}: The events this logger supports (default is: `^(trace|debug|info|warn|error|fatal)$`)
-* **source** {string?}: The source of a given log (default is: 'GLOBAL'). I usually set this using `logger.withSource(__filename)` (per file).
+// subscribe to multiple categories
+;['trace', 'debug', 'info', 'warn', 'error', 'fatal'].forEach(
+  (category) => log.on(category, writeLog)
+)
+
+// subscribe to an event
+log.on('app_startup', writeLog)
+
+// subscribe to all events
+log.on('*', writeLog)
+
+// subscribe to events that have no subscriptions
+log.on('no_listeners', writeLog)
+
+log.emit('app_startup', 'info', { hello: 'world' })
+```
+
+#### LogEmitter Options
+
+You can override the following options when creating a `LogEmitter`
+
 * **hostname** {string?}: The machine name (default is `os.hostname()` in NodeJS)
 * **pid** {number?}: The process id (default is `process.pid()` in NodeJS)
-* **defaultMode** {`/^(publish|emit)$/`}: whether the logger should "publish" (send-and-wait; default), or "emit" (send-and-move-on) to log subscribers
-
-An instance of Logger returns the following interface:
-
-* **name** {string}: The name of this instance
-* **log** {function}: This is what you execute to emit log events - more on that later
-* **withSource** {`(source: string) => Logger`}: creates a new instance of Logger using the existing configuration, except setting the source, which is emitted as part of the log metadata
-* **subscribe** {`(events: string|string[], receiver: ILogWriter): Promise<ISubscriptionResult|ISubscriptionResult[]>`}: how you subscribe to log events
-* **unsubscribe** {`(id: string): Promise<boolean>`}: how you unsubscribe from log events
+* **wildcard** {string?}: The event name that all events are emitted to
+* **noListenersEvent** {string?}: The event name that is emitted for events that have no listeners/subscribers
+* **source** {string?}: The source of a given log (default is the stack line where the event was emitted)
 
 ```JavaScript
-const { Logger } = require('@polyn/logger')
-
-// the events this instance will support
-const events = [
-  // metrics
-  // (i.e. Prometheus, Application Insights, New Relic, etc.)
-  'count',
-  'latency',
-  'gauge',
-  // audit trail
-  // (i.e. events that should be auditable, such as access to, or modification of PII)
-  'audit:info',
-  'audit:warn',
-  // only acceptable on local dev
-  // (i.e. debug secrets without risking accidental logging in master)
-  'local',
-  // standard logging fare (events)
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'fatal'
-]
-
-// shown with defaults:
-const logger = new Logger({
-  name: 'logger',
-  events,
-  source: 'GLOBAL',
-  hostname: require('os').hostname(),
-  pid: process.pid(),
-  defaultMode: 'publish'
+const log = new LogEmitter({
+  hostname: 'my-machine',
+  pid: 0,
+  wildcard: '%',
+  noListenersEvent: 'nada',
+  source: __filename,
 })
-const { log } = logger.withSource(__filename)
 ```
 
-> We are now ready to write logs... but nothing is listening for them, yet!
+### Child Loggers and Piping
 
-### Subscribing to a log topic
+`LogEmitters` can spawn children, or be piped to one another, so you can create multiple loggers as needed, and either push them out (children), or pull them together (piping).
 
-This library has several log writers built into it, and it's very easy to write your own, but I'll get to that later. First, lets look at an example:
+#### Child Loggers
+
+When you have control over the creation of all loggers, creating children is the simplest way to create short-lifetime loggers. This is particularly useful for adding loggers through middleware in apps that use frameworks like koa, or express.
 
 ```JavaScript
-const { Logger, formatters, writers } = require('@polyn/logger')
-const { BlockFormatter } = formatters
-const { DevConsoleWriter } = writers
+const { LogEmitter, writers, formatters } = require('@polyn/logger')
+const log1 = new LogEmitter()
+const log2 = new LogEmitter()
+const log3 = new LogEmitter()
+const logWriter = new writers.DevConsoleWriter({
+  formatter: new formatters.BlockFormatter()
+})
+const writeLog = async (meta, ...args) =>
+  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-// the events this instance will support
-const events = [
-  'count', 'latency', 'gauge',                        // metrics
-  'audit:info', 'audit:warn',                         // audit
-  'local',                                            // local dev only!
-  'trace', 'debug', 'info', 'warn', 'error', 'fatal'  // standard events
-]
+log2.on('*', log1.pipe())
+log3.on('*', log1.pipe())
+log1.on('info', writeLog)
 
-const logger = new Logger({ name: 'my-app', events })
-const { log } = logger.withSource(__filename)
-
-;(async () => {
-  // subscriptions should be awaited (or promised) before we emit logs
-  await logger.subscribe(
-    ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
-    new DevConsoleWriter({ formatter: new BlockFormatter() })
-  )
-
-  // nothing is listening for 'count', 'latency', 'gauge', 'audit:info',
-  // 'audit:warn', or 'local' yet
-
-  // we can emit logs using NodeJS' EventEmitter convention
-  await log('trace', { hello: 'trace' })
-  await log('debug', { hello: 'debug' })
-  await log('info', { hello: 'info' })
-  await log('warn', { hello: 'warn' })
-  await log('error', { hello: 'error' })
-  await log('fatal', { hello: 'fatal' })
-
-  // the events that we set on the log options are dynamically
-  // added to the `log` function
-  await log.trace({ hello: 'trace' })
-  await log.debug({ hello: 'debug' })
-  await log.info({ hello: 'info' })
-  await log.warn({ hello: 'warn' })
-  await log.error({ hello: 'error' })
-  await log.fatal({ hello: 'fatal' })
-})()
+log2.emit('log2', 'info', { hello: 'world' })
+log3.emit('log3', 'info', { hello: 'world' })
 ```
 
-### Writing logs
+#### Piping Loggers
 
-As seen in "Subscribing to a log topic", we can write logs in two ways: using NodeJS' EventEmitter convention, or using the dynamically added log functions. If you are using TypeScript, the latter might be useful because you can write your own typings files that enforce log body types for specific events. Otherwise it's developer preference.
-
-@polyn/logger has no opinion on what a log body is. Logs can be strings, numbers, boolean, objects... whatever, as long as the configured writer can deal with it.
+When you are consuming `LogEmitters` that were created in other sources, you can pipe their events into a central `LogEmitter`, so you can listen once, instead of many times.
 
 ```JavaScript
-const { Logger, formatters, writers } = require('@polyn/logger')
+const { LogEmitter, writers, formatters } = require('@polyn/logger')
+const log1 = new LogEmitter()
+const log2 = log1.child()
+const log3 = log1.child()
+const logWriter = new writers.DevConsoleWriter({
+  formatter: new formatters.BlockFormatter()
+})
+const writeLog = async (meta, ...args) =>
+  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-// the events this instance will support
-const events = ['foo', 'bar', 'str', 'more']
+log1.on('info', writeLog)
 
-const logger = new Logger({ name: 'my-app', events })
-const { log } = logger.withSource(__filename)
-
-// await <subscribe to the logs with a writer>
-
-// we can emit logs using NodeJS' EventEmitter convention
-log('foo', { hello: 'foo' })
-log('bar', { hello: 'bar' })
-log('str', 'message here')
-log('more', 'message', 9, true, { details: 42 }) // multiple args are emitted as an array
-
-// the events that we set on the log options are dynamically
-// added to the `log` function
-log.foo({ hello: 'foo' })
-log.bar({ hello: 'bar' })
-log.str('message here')
-log.more('message', 2, false, { details: 42 }) // multiple args are emitted as an array
+log2.emit('log2', 'info', { hello: 'world' })
+log3.emit('log3', 'info', { hello: 'world' })
 ```
 
-#### Publishing vs. Emitting
+### Log Context
 
-See the [@polyn/async-events](https://github.com/losandes/polyn-async-events#polynasync-events) documentation for [Publishing a topic](https://github.com/losandes/polyn-async-events#publishing-to-a-topic), and [Emitting a topic](https://github.com/losandes/polyn-async-events#emitting-to-a-topic) for more detailed information.
+You can add context when creating a `LogEmitter`, and this context is emitted as part of the meta for all events. This is particularly useful when adding loggers through middleware in apps that use frameworks like koa, or express.
 
-**tl;dr**: By default, this logger "publishes" the logs (send-and-wait), which means that it waits for subscribers to finish their work before moving on. This is optimized for logging to the console. If you are writing to streams, or other systems, you might prefer to emit the logs instead (send-and-move-on). You can set the default behavior to `defaultMode: 'emit'` when creating an instance of `Logger`. Regardless of the mode, you can always control the behavior using the `log.publish`, and `log.emit` functions.
+The following example creates a `LogEmitter` per-request in a koa app using `LogEmitter.child` so we can subscribe once, instead of per-request.
 
-See [Cookbook: Measuring counts, or gauges with logs](#cookbook-measuring-counts-or-gauges-with-logs), or [Cookbook: Measuring duration / latency with logs](#cookbook-measuring-duration--latency-with-logs) for an examples that use both `emit`, and `publish`.
+```JavaScript
+const { LogEmitter, writers, formatters } = require('@polyn/logger')
+const Koa = require('koa')
+const Router = require('koa-router')
+
+const logger = new LogEmitter()
+logger.on('*', console.log)
+
+const app = new Koa()
+const router = new Router()
+
+router.get('/', async (ctx) => {
+  ctx.state.log.emit('http_get', 'info', { hello: 'world' })
+  ctx.status = 200
+  ctx.body = { hello: 'world' }
+})
+
+app.use(async (ctx, next) => {
+  ctx.state = ctx.state || {}
+  ctx.state.log = logger.child({
+    context: {
+      method: ctx.request.method,
+      href: ctx.request.href,
+    },
+  })
+
+  await next()
+})
+
+app.use(router.routes())
+app.listen(3000)
+logger.emit('startup', 'info', 'listening on port 3000')
+// to see the output: curl http://localhost:3000
+```
 
 ### Available writers, and formatters
 
@@ -266,177 +266,194 @@ The bunyan formatter is expected to be used with bunyan CLI: `node test | npx bu
 
 ### Cookbook: Roll your own log writer
 
-To subscribe to an instance of Logger, you need to present it with an object that has an asynchronous `write` function, or promise. Once subscribed, the write function will receive log bodies as the first argument, and log metadata as the second argument. Log bodies can be anything. Log metadata has the following properties:
+If the provided log writers don't meet your needs, it's pretty easy to roll your own. The interface is:
 
-* **topic** {string}: The name of the logger
-* **id** {string}: A random identifier for this log, which can be used when measuring duration, latency, etc.
-* **time** {number}: Milliseconds since epoch that this log was written
+```TypeScript
+(meta: ILogEmitterMeta, ...args: any[]): Promise<void>;
+```
+
+where `ILogEmitterMeta` is:
+
+```TypeScript
+interface ILogEmitterMeta {
+  event: string;
+  category: string;
+  level: number;
+  source: string;
+  time: number;
+  hostname: string;
+  pid: number;
+  context?: any;
+}
+```
+
 * **event** {string}: The event that was emitted
-* **source** {string}: The source (i.e. `withSource(__filename)`) of the event
+* **category** {string}: The category/verbosity that was emitted
+* **level** {number}: The category as it corresponds to traditional log levels (i.e. trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60)
+* **source** {string}: The source of the event (i.e. the stack line)
+* **time** {number}: Milliseconds since epoch that this log was written
 * **hostname** {string}: The machine name
 * **pid** {number}: The process id
+* **context** {object?}: optional context associated with the log entry
+
+The following example demonstrates a logger that combines the meta, and arguments together into a string. It also demonstrates an approach to pruning sensitive data out of the logs.
 
 ```JavaScript
-const { Logger } = require('@polyn/logger')
+const { LogEmitter } = require('@polyn/logger')
+const log = new LogEmitter({
+  context: {
+    a: 'property'
+  }
+})
 
-// the events this instance will support
-const events = ['trace', 'debug', 'info', 'warn', 'error', 'fatal']
-const logger = new Logger({ name: 'my-app', events })
-const { log } = logger.withSource(__filename)
+log.on('*', async (meta, ...args) => {
+  const parts = [
+    `[${new Date(meta.time).toISOString()}]`,
+    `${meta.category.toUpperCase().padStart(6)}`,
+    `(${meta.event.toUpperCase()})`.padStart(12) + ':',
+    `${meta.pid} on ${meta.hostname}`,
+    `(${meta.source}):`,
+  ]
+  const body = typeof args[0] === 'string'
+    ? { ...meta.context, ...{ msg: args[0] } }
+    : { ...meta.context, ...args[0] }
 
-;(async () => {
-  await logger.subscribe(events, {
-    write: async (log, meta) => {
-      console.log('CUSTOM:', log, meta)
-    }
-  })
+  delete body.secret
+  console.log(parts.join(' ') + JSON.stringify(body))
+})
 
-  log('trace', { hello: 'trace' })
-  log.trace({ hello: 'trace' })
-})()
+log.emit('startup', 'info', 'listening on port 3000')
+log.emit('has_secret', 'debug', { hello: 'world', secret: 'shhhhh' })
 ```
 
 ### Cookbook: Measuring counts, or gauges with logs
 
 ```JavaScript
-const { Logger, formatters, writers } = require('@polyn/logger')
-const { BlockFormatter } = formatters
-const { DevConsoleWriter } = writers
+const { LogEmitter } = require('@polyn/logger')
+const log = new LogEmitter()
 
-const countWriter = () => {
+function CountWriter () {
   const counts = {}
 
   return {
     getCount: (name) => counts[name],
-    write: async (log, meta) => {
-      counts[log.name] = counts[log.name] || { name: log.name, count: 0 }
-      counts[log.name].count += 1
-    }
+    write: async (meta, ...args) => {
+      const log = args[0]
+      counts[meta.event] = counts[meta.event] || { name: meta.event, count: 0 }
+      counts[meta.event].count += 1
+    },
   }
 }
 
-const gaugeWriter = () => {
+function GaugeWriter () {
   const gauges = {}
 
   return {
     getGauge: (name) => { return gauges[name] },
-    write: async (log, meta) => {
-      if (meta.event === 'gauge:increase') {
-        gauges[log.name] = gauges[log.name] || { name: log.name, gauge: 0 }
-        gauges[log.name].gauge += 1
-      } else if (meta.event === 'gauge:decrease') {
-        gauges[log.name] = gauges[log.name] || { name: log.name, gauge: 1 }
-        gauges[log.name].gauge -= 1
+    write: async (meta, ...args) => {
+      const log = args[0]
+      if (meta.category === 'gauge:increase') {
+        gauges[meta.event] = gauges[meta.event] || { name: meta.event, gauge: 0 }
+        gauges[meta.event].gauge += 1
+      } else if (meta.category === 'gauge:decrease') {
+        gauges[meta.event] = gauges[meta.event] || { name: meta.event, gauge: 1 }
+        gauges[meta.event].gauge -= 1
       }
-
-    }
+    },
   }
 }
 
-// the events this instance will support
-const events = [
-  'count',
-  'gauge:increase', 'gauge:decrease',
-  'metrics'
-]
-const logger = new Logger({ name: 'my-app', events })
-const { log } = logger.withSource(__filename)
+const counts = new CountWriter()
+const gauges = new GaugeWriter()
 
-const counts = countWriter()
-const gauges = gaugeWriter()
+log.on('count', counts.write)
+log.on('gauge:increase', gauges.write)
+log.on('gauge:decrease', gauges.write)
+log.on('metrics', (meta, ...args) =>
+  console.log(meta.event, args[0])
+)
 
-;(async () => {
-  await logger.subscribe(['count'], counts)
-  await logger.subscribe(['gauge:increase', 'gauge:decrease'], gauges)
-  await logger.subscribe(
-    ['metrics'],
-    new DevConsoleWriter({ formatter: new BlockFormatter() })
-  )
+const testCountMetrics = (name, expected) => {
+  const actual = counts.getCount(name)
+  return {
+    success: expected === actual.count,
+    expected: expected,
+    actual,
+  }
+}
 
-  // we don't need to wait for counts to be written/updated
-  await log.emit('count', { name: 'foo' })
-  await log.emit('count', { name: 'bar' })
-  await log.emit('count', { name: 'foo' })
+const testGaugeMetrics = (name, expected) => {
+  const actual = gauges.getGauge(name)
+  return {
+    success: expected === actual.gauge,
+    expected: expected,
+    actual,
+  }
+}
 
-  await log.emit('metrics', counts.getCount('foo'))
-  await log.emit('metrics', counts.getCount('bar'))
+log.emit('foo', 'count', { labels: { a: 'label' } })
+log.emit('bar', 'count', { labels: { a: 'label' } })
+log.emit('foo', 'count', { labels: { a: 'label' } })
 
-  // we do need to wait for gauges to be written/updated for them to be accurate
-  await log.publish('gauge:increase', { name: 'foo' })
-  await log.publish('gauge:increase', { name: 'bar' })
-  await log.publish('gauge:increase', { name: 'foo' })
+log.emit('foo', 'metrics', testCountMetrics('foo', 2))
+log.emit('bar', 'metrics', testCountMetrics('bar', 1))
 
-  await log.publish('metrics', gauges.getGauge('foo'))
-  await log.publish('metrics', gauges.getGauge('bar'))
+log.emit('bar', 'gauge:increase', { labels: { a: 'label' } })
+log.emit('foo', 'gauge:increase', { labels: { a: 'label' } })
 
-  await log.publish('gauge:decrease', { name: 'foo' })
+log.emit('foo', 'metrics', testGaugeMetrics('foo', 1))
+log.emit('bar', 'metrics', testGaugeMetrics('bar', 1))
 
-  await log.publish('metrics', gauges.getGauge('foo'))
-  await log.publish('metrics', gauges.getGauge('bar'))
-})()
+log.emit('foo', 'gauge:decrease', { labels: { a: 'label' } })
+
+log.emit('foo', 'metrics', testGaugeMetrics('foo', 0))
+log.emit('bar', 'metrics', testGaugeMetrics('bar', 1))
 ```
-
 
 ### Cookbook: Measuring duration / latency with logs
 
-Let's start with an example writer:
-
 ```JavaScript
-const latencyWriter = () => {
+const { LogEmitter } = require('@polyn/logger')
+const log = new LogEmitter()
+const { randomBytes } = require('crypto')
+
+function LatencyWriter () {
   const latencies = {}
 
   return {
-    write: async (log, meta) => {
-      if (meta.event === 'latency:start') {
-        latencies[meta.id] = { log, meta, start: Date.now() }
-        return latencies[meta.id]
-      } else if (meta.event === 'latency:end') {
-        const found = latencies[log.meta.id]
-        found.end = Date.now()
-        console.log(`LATENCY  (duration: ${found.end - found.start})`, found.log)
-        delete latencies[log.meta.id]
-        return found
+    write: async (meta, ...args) => {
+      const log = args[0]
+      if (meta.category === 'latency:start') {
+        latencies[meta.event] = {
+          log,
+          meta,
+          start: Date.now()
+        }
+      } else if (meta.category === 'latency:end') {
+        const end = Date.now()
+        const found = latencies[meta.event]
+        console.log(`LATENCY  (duration: ${end - found.start})`, found.log)
+        delete latencies[meta.event]
       }
-    }
+    },
   }
 }
+
+const latencyWriter = new LatencyWriter()
+
+log.on('latency:start', latencyWriter.write)
+log.on('latency:end', latencyWriter.write)
+
+const id = randomBytes(4).toString('hex')
+log.emit(id, 'latency:start', { labels: { a: 'property' } })
+// does not print
+
+setTimeout(() => {
+  log.emit(id, 'latency:end')
+  // prints: LATENCY (duration: 30) { hello: 'latency' }
+}, 30)
 ```
 
-This writer expects two events to be emitted: one to start the timer, and another to end it. Alternatively, the log body could be used to indicate start and end with a single event name. Below is an example that shows how to use such a timer:
+### Legacy documentation
 
-```JavaScript
-const { Logger, formatters, writers } = require('@polyn/logger')
-const { BlockFormatter } = formatters
-const { DevConsoleWriter } = writers
-
-// const latencyWriter = <latencyTimer here> (example above)
-
-// the events this instance will support
-const events = [
-  'latency:start', 'latency:end',
-  'trace', 'debug', 'info', 'warn', 'error', 'fatal'
-]
-const logger = new Logger({ name: 'my-app', events })
-const { log } = logger.withSource(__filename)
-
-;(async () => {
-  await logger.subscribe(['latency:start', 'latency:end'], latencyWriter())
-  await logger.subscribe(
-    ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
-    new DevConsoleWriter({ formatter: new BlockFormatter() }),
-  )
-
-  await log.publish('trace', { hello: 'trace' })
-  // prints: TRACE::1576081604801::/polyn-logger/test.manual.js
-
-  // we need to wait for latency to be started for this to be accurate
-  const start = await log.publish('latency:start', { hello: 'latency' })
-  // does not print
-
-  setTimeout(async () => {
-    // we don't need to wait for latency end events to publish, though
-    await log.emit('latency:end', start)
-    // prints: LATENCY (duration: 30) { hello: 'latency' }
-  }, 30)
-})()
-```
+There is also an async event emitter that has similar features, but is more opinionated: [README.0.2.2.md](./README.0.2.2.md)

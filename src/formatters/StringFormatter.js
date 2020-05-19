@@ -23,12 +23,11 @@ module.exports = {
 
         // remove line breaks
         message = typeof message === 'string' ? message.replace(/\n/g, '\\n').replace(/\r/g, '\\r') : ''
-        return resolve([
-          meta.event.toUpperCase(),
-          meta.time,
-          meta.source,
-          message,
-        ].join(DELIMITER))
+        const parts = meta.category === meta.event
+          ? [meta.category.toUpperCase(), meta.time, meta.source, message]
+          : [meta.category.toUpperCase(), meta.event, meta.time, meta.source, message]
+
+        return resolve(parts.join(DELIMITER))
       })
 
       return { format }

@@ -1,5 +1,6 @@
+const EventEmitter = require('events')
 const os = require('os')
-const events = require('@polyn/async-events')
+const asyncEvents = require('@polyn/async-events')
 const blueprint = require('@polyn/blueprint')
 const immutable = require('@polyn/immutable')
 
@@ -36,13 +37,19 @@ const writers = {
 }
 
 // logger
-const { LogMetaFactory } = require('./src/LogMetaFactory').factory(blueprint, immutable, os)
-const { Logger } = require('./src/Logger').factory(
+const { LogMetaFactory } = require('./src/LogMetaFactory')({ blueprint, immutable, os })
+const { Logger } = require('./src/Logger')({
   blueprint,
   immutable,
-  events,
+  asyncEvents,
   LogMetaFactory,
   validateWriter,
-)
+})
+const { LogEmitter } = require('./src/LogEmitter')({
+  blueprint,
+  immutable,
+  EventEmitter,
+  LogMetaFactory,
+})
 
-module.exports = { Logger, formatters, writers }
+module.exports = { Logger, formatters, writers, LogEmitter }
