@@ -36,6 +36,16 @@ const writers = {
   StdoutWriter,
 }
 
+// middleware / utils
+const { makeId } = require('./src/make-id')()
+const time = require('./src/time')()
+const { makeTryWithMetrics, METRICS_CATEGORIES } = require('./src/try-with-metrics')({
+  blueprint,
+  immutable,
+  makeId,
+  time,
+})
+
 // logger
 const { LogMetaFactory } = require('./src/LogMetaFactory')({ blueprint, immutable, os })
 const { Logger } = require('./src/Logger')({
@@ -50,6 +60,13 @@ const { LogEmitter } = require('./src/LogEmitter')({
   immutable,
   EventEmitter,
   LogMetaFactory,
+  makeTryWithMetrics,
 })
 
-module.exports = { Logger, formatters, writers, LogEmitter }
+module.exports = {
+  Logger,
+  formatters,
+  writers,
+  LogEmitter,
+  METRICS_CATEGORIES,
+}

@@ -43,6 +43,11 @@ export interface ILoggerOptions {
   pid?: number;
 }
 
+interface CATEGORY_SCHEMA {
+  CATEGORY: string;
+  HELP: string;
+}
+
 export interface ILogEmitterOptions {
   source?: string;
   hostname?: string;
@@ -50,6 +55,25 @@ export interface ILogEmitterOptions {
   wildcardEvent?: string;
   noListenersEvent?: string;
   context?: any;
+  // for try with metrics:
+  latencyTimeoutMs?: number;
+  METRICS_CATEGORIES?: {
+    WARN?: CATEGORY_SCHEMA,
+    COUNT?: CATEGORY_SCHEMA,
+    COUNT_ERRORS?: CATEGORY_SCHEMA,
+    GAUGE?: CATEGORY_SCHEMA,
+    GAUGE_INCREASE?: CATEGORY_SCHEMA,
+    GAUGE_DECREASE?: CATEGORY_SCHEMA,
+    LATENCY_START?: CATEGORY_SCHEMA,
+    LATENCY_END?: CATEGORY_SCHEMA,
+    LATENCY?: CATEGORY_SCHEMA,
+  },
+}
+
+export interface ITryWithMetricsOptions {
+  name: string;
+  labels?: any; // i.e. { method: ctx.request.method, href: ctx.request.href }
+  shouldCountError? (err: Error, input: ITryWithMetricsOptions): boolean;
 }
 
 /**
@@ -135,4 +159,5 @@ declare class LogEmitter extends EventEmitter {
   emit(event: string | symbol, level: string, ...args: any[]): boolean;
   pipe(meta: ILogEmitterMeta, ...args: any[]): boolean;
   child(options: ILogEmitterOptions): LogEmitter;
+  tryWithMetrics(options: ITryWithMetricsOptions): (action: Promise<any>) => Promise<any>;
 }
