@@ -94,11 +94,11 @@ const log = new LogEmitter({
 })
 ```
 
-### Child Loggers and Piping
+## Child Loggers and Piping
 
 `LogEmitters` can spawn children, or be piped to one another, so you can create multiple loggers as needed, and either push them out (children), or pull them together (piping).
 
-#### Child Loggers
+### Child Loggers
 
 When you have control over the creation of all loggers, creating children is the simplest way to create short-lifetime loggers. This is particularly useful for adding loggers through middleware in apps that use frameworks like koa, or express.
 
@@ -119,7 +119,7 @@ log2.emit('log2', 'info', { hello: 'world' })
 log3.emit('log3', 'info', { hello: 'world' })
 ```
 
-#### Piping Loggers
+### Piping Loggers
 
 When you are consuming `LogEmitters` that were created in other sources, you can pipe their events into a central `LogEmitter`, so you can listen once, instead of many times.
 
@@ -142,7 +142,7 @@ log2.emit('log2', 'info', { hello: 'world' })
 log3.emit('log3', 'info', { hello: 'world' })
 ```
 
-### Log Context
+## Log Context
 
 You can add context when creating a `LogEmitter`, and this context is emitted as part of the meta for all events. This is particularly useful when adding loggers through middleware in apps that use frameworks like koa, or express.
 
@@ -183,7 +183,97 @@ logger.emit('startup', 'info', 'listening on port 3000')
 // to see the output: curl http://localhost:3000
 ```
 
-### Available writers, and formatters
+## Tracking performance and metrics
+
+We often need to track the performance (latency) of I/O bound features (i.e. HTTP requests, database requests, API response times), as well as compute bound features (i.e. algorithms). Knowing the number of times a feature is used (counts), as well as the volume it receives (gauges) can help us understand which features are most important to our users, or if a feature is actively being used, right now.
+
+`LogEmitter` has:
+
+```TypeScript
+tryWithMetrics(options: ITryWithMetricsOptions):
+  (action: Promise<any>) => Promise<any>;
+```
+
+ This can be used to reduce the amount of effort required to gather these kinds of metrics.
+
+```JavaScript
+const { LogEmitter } = require('@polyn/logger')
+const log = new LogEmitter({
+  // default timeout for latency measurement is 30 seconds
+  latencyTimeoutMs: 30000,
+  METRICS_CATEGORIES: {
+    WARN: {
+      CATEGORY: 'metrics_warn',
+      HELP: 'my override'
+    },
+    // COUNT: // same schema as WARN example
+    // COUNT_ERRORS: // same schema as WARN example
+    // GAUGE: // same schema as WARN example
+    // GAUGE_INCREASE: // same schema as WARN example
+    // GAUGE_DECREASE: // same schema as WARN example
+    // LATENCY_START: // same schema as WARN example
+    // LATENCY_END: // same schema as WARN example
+    // LATENCY: // same schema as WARN example
+  },
+})
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const stubHandler = (meta, ...args) => console.log(meta, args[0])
+
+// counts the number of occurences of a given action
+log.on('count', stubHandler)
+
+// counts the number of errors that occur when executing a given action
+log.on('count_errors', stubHandler)
+
+// tracks the number of a given action currently being executed
+log.on('gauge', stubHandler)
+
+// OR you can subscribe to gauge increase, and decrease separately
+// tracks an increase in the number of a given action currently beint executed
+log.on('gauge_increase', stubHandler)
+
+// tracks an decrease in the number of a given action currently beint executed
+log.on('gauge_decrease', stubHandler)
+
+// tracks the beginning time of a given action
+log.on('latency_start', stubHandler)
+
+// tracks the end time of a given action, and emits the latency event
+log.on('latency_end', stubHandler)
+
+// measures the length of time it takes to complete a given action
+log.on('latency', stubHandler)
+
+// for events where this module encounters unexpected behavior
+// i.e. latency timeouts
+log.on('warn', stubHandler)
+
+await log.tryWithMetrics({
+  name: 'http_request',
+  labels: {
+    method: 'GET',
+    href: 'https://localhost:3000',
+  },
+})(async () => {
+  // http request here
+  await sleep(5)
+})
+
+// NOTE that tryWithMetrics returns curried functions so you can:
+const tryHttpRequest = log.tryWithMetrics({
+  name: 'http_request',
+  labels: {
+    method: 'GET',
+    href: 'https://localhost:3000',
+  },
+})
+await tryHttpRequest(async () => {
+  // http request here
+  await sleep(5)
+})
+```
+
+## Available writers, and formatters
 
 This library exports both formatters, and writers, which can be used interchangeably, or as part of your own custom writers, or formatters. That being said, each formatter this library exports is optimized for a specific writer. The examples here illustrate that coupling.
 
@@ -238,7 +328,7 @@ new StdoutWriter({ formatter: new JsonFormatter() })
 
 ![json-formatter-stdout-writer](screenshots/json-formatter-stdout-writer.png)
 
-#### The bunyan formatter
+### The bunyan formatter
 
 The bunyan formatter accepts an `events` argument which you can use to map the events you are logging to bunyan's level system.
 
@@ -264,7 +354,7 @@ The bunyan formatter is expected to be used with bunyan CLI: `node test | npx bu
 
 ![bunyan-formatter-stdout-writer](screenshots/bunyan-formatter-stdout-writer.png)
 
-### Cookbook: Roll your own log writer
+## Cookbook: Roll your own log writer
 
 If the provided log writers don't meet your needs, it's pretty easy to roll your own. The interface is:
 
@@ -326,7 +416,7 @@ log.emit('startup', 'info', 'listening on port 3000')
 log.emit('has_secret', 'debug', { hello: 'world', secret: 'shhhhh' })
 ```
 
-### Cookbook: Measuring counts, or gauges with logs
+## Cookbook: Measuring counts, or gauges with logs
 
 ```JavaScript
 const { LogEmitter } = require('@polyn/logger')
@@ -410,7 +500,7 @@ log.emit('foo', 'metrics', testGaugeMetrics('foo', 0))
 log.emit('bar', 'metrics', testGaugeMetrics('bar', 1))
 ```
 
-### Cookbook: Measuring duration / latency with logs
+## Cookbook: Measuring duration / latency with logs
 
 ```JavaScript
 const { LogEmitter } = require('@polyn/logger')
@@ -454,6 +544,6 @@ setTimeout(() => {
 }, 30)
 ```
 
-### Legacy documentation
+## Legacy documentation
 
 There is also an async event emitter that has similar features, but is more opinionated: [README.0.2.2.md](./README.0.2.2.md)

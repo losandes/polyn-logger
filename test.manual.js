@@ -545,6 +545,64 @@ const rollYourLogWriter = async () => {
   log.emit('has_secret', 'debug', { hello: 'world', secret: 'shhhhh' })
 }
 
+const tryWithMetrics = async () => {
+  const log = new LogEmitter()
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  const stubHandler = (meta, ...args) => console.log(meta, args[0])
+
+  // counts the number of occurences of a given action
+  log.on('count', stubHandler)
+
+  // counts the number of errors that occur when executing a given action
+  log.on('count_errors', stubHandler)
+
+  // tracks the number of a given action currently being executed
+  log.on('gauge', stubHandler)
+
+  // OR you can subscribe to gauge increase, and decrease separately
+  // tracks an increase in the number of a given action currently beint executed
+  log.on('gauge_increase', stubHandler)
+
+  // tracks an decrease in the number of a given action currently beint executed
+  log.on('gauge_decrease', stubHandler)
+
+  // tracks the beginning time of a given action
+  log.on('latency_start', stubHandler)
+
+  // tracks the end time of a given action, and emits the latency event
+  log.on('latency_end', stubHandler)
+
+  // measures the length of time it takes to complete a given action
+  log.on('latency', stubHandler)
+
+  // for events where this module encounters unexpected behavior
+  log.on('warn', stubHandler)
+
+  await log.tryWithMetrics({
+    name: 'http_request',
+    labels: {
+      method: 'GET',
+      href: 'https://localhost:3000',
+    },
+  })(async () => {
+    // http request here
+    await sleep(5)
+  })
+
+  // NOTE that tryWithMetrics returns curried functions so you can:
+  const tryHttpRequest = log.tryWithMetrics({
+    name: 'http_request',
+    labels: {
+      method: 'GET',
+      href: 'https://localhost:3000',
+    },
+  })
+  await tryHttpRequest(async () => {
+    // http request here
+    await sleep(5)
+  })
+}
+
 ;(async () => {
   await standardFare()
   await multipleParams()
@@ -558,6 +616,7 @@ const rollYourLogWriter = async () => {
   await emitterPiping()
   await emitterChildren()
   await rollYourLogWriter()
+  await tryWithMetrics()
 
   // await emitterContext()
 })()

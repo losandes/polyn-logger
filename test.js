@@ -1,15 +1,10 @@
 const { expect } = require('chai')
 const supposed = require('supposed')
-const { Logger, LogEmitter, formatters, writers } = require('@polyn/logger')
+const polynLogger = require('@polyn/logger')
 
 module.exports = supposed.Suite({
   name: 'polyn-logger',
   assertionLibrary: expect,
-  inject: {
-    Logger,
-    LogEmitter,
-    formatters,
-    writers,
-  },
+  inject: polynLogger,
 }).runner()
   .run()

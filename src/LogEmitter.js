@@ -3,13 +3,14 @@
  * @param {@polyn/immutable} immutable
  * @param {LogMetaFactory} LogMetaFactory
  * @param {events} EventEmitter
+ * @param {Function} makeTryWithMetrics
  */
 function LogEmitterFactory (deps) {
   'use strict'
 
   const { optional } = deps.blueprint
   const { immutable } = deps.immutable
-  const { LogMetaFactory, EventEmitter } = deps
+  const { LogMetaFactory, EventEmitter, makeTryWithMetrics } = deps
   const TAB_AT_EXP = /^(\s+)at /
 
   const LogEmitterOptions = immutable('LogEmitterOptions', {
@@ -28,6 +29,10 @@ function LogEmitterFactory (deps) {
       this.LogMeta = LogMetaFactory({
         ...{ isValidEvent: () => true },
         ...this.options,
+      })
+      this.tryWithMetrics = makeTryWithMetrics({
+        ...input,
+        ...{ emitter: this },
       })
     }
 
