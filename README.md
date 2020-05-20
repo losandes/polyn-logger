@@ -203,7 +203,7 @@ const log = new LogEmitter({
   latencyTimeoutMs: 30000,
   METRICS_CATEGORIES: {
     WARN: {
-      CATEGORY: 'metrics_warn',
+      CATEGORY: 'metrics_warn', // default is 'warn'
       HELP: 'my override'
     },
     // COUNT: // same schema as WARN example
@@ -242,11 +242,13 @@ log.on('latency_start', stubHandler)
 log.on('latency_end', stubHandler)
 
 // measures the length of time it takes to complete a given action
+// you can just subscribe to this, if you want the duration, and
+// don't need to set a timer yourself
 log.on('latency', stubHandler)
 
 // for events where this module encounters unexpected behavior
 // i.e. latency timeouts
-log.on('warn', stubHandler)
+log.on('metrics_warn' /* 'warn' if you didn't override this */ , stubHandler)
 
 await log.tryWithMetrics({
   name: 'http_request',
