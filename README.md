@@ -4,27 +4,7 @@
 
 ![block-formatter-dev-console-writer](screenshots/block-formatter-dev-console-writer.png)
 
-_What does "event based" mean in the context of logging?_
-
-In my career, most of the logging libraries that I've used either had a static set of verbosities, or were level based (10 is trace, 20 is debug, etc.). Often, they weren't extensible in the way that I needed them to be, so in order to meet product, and project needs, I've consistently done unnaturally complex things to... log information.
-
-_So is this logger complex then?_
-
-No. It's dead simple. It just follows a flexible event structure, instead of a fixed one. It treats disparate logging needs as a compositional problem.
-
-For instance, we typically need to log/track many domains of information: debugging, event (info, errors), audit (PII), performance (latency), metrics (counts, and gauges), and so on. We often use a combination of technologies to deal with these domains, and it's easy for code to get overwhelmed with calls to different tracking libraries.
-
-With @polyn/logger, all of these types of information can be written to the same logging instance, using the same patterns, and we deal with the unique aspects of each domain by subscribing to the events with purposeful log writers.
-
-As well, code in libraries can write to this logger, and export the logger instance so code that consumes those libraries can choose whether or not to subscribe to the logs, metrics, etc.
-
-Assuming we inject the loggers into our code (deterministic), rather than instantiating them in our code (non-deterministic), **logs become an asset that can be evaluated in our tests, and can even be used to observe code that is not exported (private)** (i.e. `log('test', { something: 'private or encapsulated' })`).
-
-_Why not use Bunyan, or Pino_
-
-Bunyan and Pino are awesome. This library is both inspired by them, and can be used with them (i.e. bunyan CLI). Bunyan, and Pino work very well if you need a wide variety of destination support, and/or need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around those libraries, and you should also consider using one of them.
-
-## Gettings Started
+## Getting Started
 
 ```Shell
 > npm install --save @polyn/logger
@@ -51,28 +31,46 @@ const log = new LogEmitter()
 const logWriter = new writers.DevConsoleWriter({
   formatter: new formatters.BlockFormatter()
 })
-const writeLog = async (meta, ...args) =>
-  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
 // subscribe to a category
-log.on('info', writeLog)
+log.on('info', logWriter.listen)
 
 // subscribe to multiple categories
 ;['trace', 'debug', 'info', 'warn', 'error', 'fatal'].forEach(
-  (category) => log.on(category, writeLog)
+  (category) => log.on(category, logWriter.listen)
 )
 
 // subscribe to an event
-log.on('app_startup', writeLog)
+log.on('app_startup', logWriter.listen)
 
 // subscribe to all events
-log.on('*', writeLog)
+log.on('*', logWriter.listen)
 
 // subscribe to events that have no subscriptions
-log.on('no_listeners', writeLog)
+log.on('no_listeners', logWriter.listen)
 
 log.emit('app_startup', 'info', { hello: 'world' })
 ```
+
+## What does "event based" mean in the context of logging?
+
+In my career, most of the logging libraries that I've used either had a static set of verbosities, or were level based (10 is trace, 20 is debug, etc.). Often, they weren't extensible in the way that I needed them to be, so in order to meet product, and project needs, I've consistently done unnaturally complex things to... log information.
+
+_So is this logger complex then?_
+
+No. It's dead simple. It just follows a flexible event structure, instead of a fixed one. It treats disparate logging needs as a compositional problem.
+
+For instance, we typically need to log/track many domains of information: debugging, event (info, errors), audit (PII), performance (latency), metrics (counts, and gauges), and so on. We often use a combination of technologies to deal with these domains, and it's easy for code to get overwhelmed with calls to different tracking libraries.
+
+With @polyn/logger, all of these types of information can be written to the same logging instance, using the same patterns, and we deal with the unique aspects of each domain by subscribing to the events with purposeful log writers.
+
+As well, code in libraries can write to this logger, and export the logger instance so code that consumes those libraries can choose whether or not to subscribe to the logs, metrics, etc.
+
+Assuming we inject the loggers into our code (deterministic), rather than instantiating them in our code (non-deterministic), **logs become an asset that can be evaluated in our tests, and can even be used to observe code that is not exported (private)** (i.e. `log('test', { something: 'private or encapsulated' })`).
+
+_Why not use Bunyan, or Pino_
+
+Bunyan and Pino are awesome. This library is both inspired by them, and can be used with them (i.e. bunyan CLI). Bunyan, and Pino work very well if you need a wide variety of destination support, and/or need just the basic trace|debug|info|warn|error|fatal. The latter is rarely true for me anymore. If that's all you need, there is a larger community built around those libraries, and you should also consider using one of them.
 
 #### LogEmitter Options
 
@@ -110,11 +108,8 @@ const log3 = log2.child()
 const logWriter = new writers.DevConsoleWriter({
   formatter: new formatters.BlockFormatter()
 })
-const writeLog = async (meta, ...args) =>
-  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-log1.on('info', writeLog)
-
+log1.on('info', logWriter.listen)
 log2.emit('log2', 'info', { hello: 'world' })
 log3.emit('log3', 'info', { hello: 'world' })
 ```
@@ -131,12 +126,10 @@ const log3 = new LogEmitter()
 const logWriter = new writers.DevConsoleWriter({
   formatter: new formatters.BlockFormatter()
 })
-const writeLog = async (meta, ...args) =>
-  logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
 log2.on('*', log1.pipe())
 log3.on('*', log1.pipe())
-log1.on('info', writeLog)
+log1.on('info', logWriter.listen)
 
 log2.emit('log2', 'info', { hello: 'world' })
 log3.emit('log3', 'info', { hello: 'world' })
@@ -153,8 +146,11 @@ const { LogEmitter, writers, formatters } = require('@polyn/logger')
 const Koa = require('koa')
 const Router = require('koa-router')
 
-const logger = new LogEmitter()
-logger.on('*', console.log)
+const appLogger = new LogEmitter()
+const logWriter = new writers.StdoutWriter({
+  formatter: new formatters.SquashFormatter(),
+})
+appLogger.on('*', logWriter.listen)
 
 const app = new Koa()
 const router = new Router()
@@ -167,7 +163,7 @@ router.get('/', async (ctx) => {
 
 app.use(async (ctx, next) => {
   ctx.state = ctx.state || {}
-  ctx.state.log = logger.child({
+  ctx.state.log = appLogger.child({
     context: {
       method: ctx.request.method,
       href: ctx.request.href,
@@ -179,7 +175,7 @@ app.use(async (ctx, next) => {
 
 app.use(router.routes())
 app.listen(3000)
-logger.emit('startup', 'info', 'listening on port 3000')
+appLogger.emit('startup', 'info', 'listening on port 3000')
 // to see the output: curl http://localhost:3000
 ```
 
@@ -197,7 +193,7 @@ tryWithMetrics(options: ITryWithMetricsOptions):
  This can be used to reduce the amount of effort required to gather these kinds of metrics.
 
 ```JavaScript
-const { LogEmitter } = require('@polyn/logger')
+const { LogEmitter, writers, formatters } = require('@polyn/logger')
 const log = new LogEmitter({
   // default timeout for latency measurement is 30 seconds
   latencyTimeoutMs: 30000,
@@ -216,39 +212,41 @@ const log = new LogEmitter({
     // LATENCY: // same schema as WARN example
   },
 })
+const logWriter = new writers.DevConsoleWriter({
+  formatter: new formatters.BlockFormatter(),
+})
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const stubHandler = (meta, ...args) => console.log(meta, args[0])
 
 // counts the number of occurences of a given action
-log.on('count', stubHandler)
+log.on('count', logWriter.listen)
 
 // counts the number of errors that occur when executing a given action
-log.on('count_errors', stubHandler)
+log.on('count_errors', logWriter.listen)
 
 // tracks the number of a given action currently being executed
-log.on('gauge', stubHandler)
+log.on('gauge', logWriter.listen)
 
 // OR you can subscribe to gauge increase, and decrease separately
 // tracks an increase in the number of a given action currently beint executed
-log.on('gauge_increase', stubHandler)
+log.on('gauge_increase', logWriter.listen)
 
 // tracks an decrease in the number of a given action currently beint executed
-log.on('gauge_decrease', stubHandler)
+log.on('gauge_decrease', logWriter.listen)
 
 // tracks the beginning time of a given action
-log.on('latency_start', stubHandler)
+log.on('latency_start', logWriter.listen)
 
 // tracks the end time of a given action, and emits the latency event
-log.on('latency_end', stubHandler)
+log.on('latency_end', logWriter.listen)
 
 // measures the length of time it takes to complete a given action
 // you can just subscribe to this, if you want the duration, and
 // don't need to set a timer yourself
-log.on('latency', stubHandler)
+log.on('latency', logWriter.listen)
 
 // for events where this module encounters unexpected behavior
 // i.e. latency timeouts
-log.on('metrics_warn' /* 'warn' if you didn't override this */ , stubHandler)
+log.on('metrics_warn' /* 'warn' if you didn't override this */ , logWriter.listen)
 
 await log.tryWithMetrics({
   name: 'http_request',
@@ -288,6 +286,7 @@ Formatters:
 * **JsonFormatter**
 * **PassThroughFormatter**
 * **StringFormatter**
+* **SquashFormatter**
 
 Writers:
 
@@ -329,6 +328,16 @@ new StdoutWriter({ formatter: new JsonFormatter() })
 ```
 
 ![json-formatter-stdout-writer](screenshots/json-formatter-stdout-writer.png)
+
+### The SquashFormatter
+
+Some log utilities don't like OOP / nested objects. The SquashFormatter merges the log metadata with the log you write, and flattens the structure, so it exists only on one plane. It does still yield arrays, but it flattens the contents of arrays, so all values are primitives.
+
+```JavaScript
+new StdoutWriter({ formatter: new SquashFormatter() })
+```
+
+![squash-formatter-stdout-writer](squash-formatter-stdout-writer.png)
 
 ### The bunyan formatter
 
