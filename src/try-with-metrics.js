@@ -56,21 +56,22 @@ function TryWithMetricsFactory (deps) {
     HELP: 'string',
   }
 
+  const MetricsCategories = immutable('MetricsCategories', {
+    WARN: _CATEGORY_SCHEMA,
+    COUNT: _CATEGORY_SCHEMA,
+    COUNT_ERRORS: _CATEGORY_SCHEMA,
+    GAUGE: _CATEGORY_SCHEMA,
+    GAUGE_INCREASE: _CATEGORY_SCHEMA,
+    GAUGE_DECREASE: _CATEGORY_SCHEMA,
+    LATENCY_START: _CATEGORY_SCHEMA,
+    LATENCY_END: _CATEGORY_SCHEMA,
+    LATENCY: _CATEGORY_SCHEMA,
+  })
+
   const TryWithMetricsOptions = immutable('TryWithMetricsOptions', {
     emitter: { on: 'function', emit: 'function' },
     timeUnits: optional(/^(s|ms|us|ns)$/).withDefault('us'),
     latencyTimeoutMs: optional('number').withDefault(30000),
-    METRICS_CATEGORIES: {
-      WARN: _CATEGORY_SCHEMA,
-      COUNT: _CATEGORY_SCHEMA,
-      COUNT_ERRORS: _CATEGORY_SCHEMA,
-      GAUGE: _CATEGORY_SCHEMA,
-      GAUGE_INCREASE: _CATEGORY_SCHEMA,
-      GAUGE_DECREASE: _CATEGORY_SCHEMA,
-      LATENCY_START: _CATEGORY_SCHEMA,
-      LATENCY_END: _CATEGORY_SCHEMA,
-      LATENCY: _CATEGORY_SCHEMA,
-    },
   })
 
   const TryWithMetricsActionOptions = immutable('TryWithMetricsActionOptions', {
@@ -130,11 +131,24 @@ function TryWithMetricsFactory (deps) {
     })
   }
 
+  const maybeMetricsCategoryOverride = (options) => (name) => options && options.METRICS_CATEGORIES && options.METRICS_CATEGORIES[name]
+    ? options.METRICS_CATEGORIES[name]
+    : _METRICS_CATEGORIES[name]
+
   const makeTryWithMetrics = (options) => {
-    const { timeUnits, latencyTimeoutMs, METRICS_CATEGORIES } = new TryWithMetricsOptions({
-      ...{ METRICS_CATEGORIES: _METRICS_CATEGORIES },
-      ...options
+    const maybeMcOverride = maybeMetricsCategoryOverride(options)
+    const METRICS_CATEGORIES = new MetricsCategories({
+      WARN: maybeMcOverride('WARN'),
+      COUNT: maybeMcOverride('COUNT'),
+      COUNT_ERRORS: maybeMcOverride('COUNT_ERRORS'),
+      GAUGE: maybeMcOverride('GAUGE'),
+      GAUGE_INCREASE: maybeMcOverride('GAUGE_INCREASE'),
+      GAUGE_DECREASE: maybeMcOverride('GAUGE_DECREASE'),
+      LATENCY_START: maybeMcOverride('LATENCY_START'),
+      LATENCY_END: maybeMcOverride('LATENCY_END'),
+      LATENCY: maybeMcOverride('LATENCY'),
     })
+    const { timeUnits, latencyTimeoutMs } = new TryWithMetricsOptions(options)
     const emitter = options.emitter // use the original emitter, not the immutable'd one
     measureLatency({ emitter, METRICS_CATEGORIES, timeUnits, latencyTimeoutMs })
 

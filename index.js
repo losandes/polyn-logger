@@ -13,6 +13,7 @@ const { BunyanFormatter } = require('./src/formatters/BunyanFormatter').factory(
 const { JsonFormatter } = require('./src/formatters/JsonFormatter').factory(blueprint, errorFormatter)
 const { PassThroughFormatter } = require('./src/formatters/PassThroughFormatter').factory()
 const { StringFormatter } = require('./src/formatters/StringFormatter').factory(blueprint, errorFormatter)
+const { SquashFormatter } = require('./src/formatters/SquashFormatter')({ blueprint })
 
 const formatters = {
   BlockFormatter,
@@ -20,6 +21,7 @@ const formatters = {
   JsonFormatter,
   PassThroughFormatter,
   StringFormatter,
+  SquashFormatter,
 }
 
 // writers

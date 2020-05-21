@@ -5,6 +5,7 @@ const {
   JsonFormatter,
   PassThroughFormatter,
   StringFormatter,
+  SquashFormatter,
 } = formatters
 const {
   ArrayWriter,
@@ -33,6 +34,7 @@ const _writers = [
   /* 5 */ (events) => new StdoutWriter({ formatter: new BunyanFormatter(events) }),
   /* 6 */ arrayWriter,
   /* 7 */ customWriter(),
+  /* 8 */ new StdoutWriter({ formatter: new SquashFormatter() }),
 ]
 
 // standard fare
@@ -424,46 +426,25 @@ const gettingStarted = async () => {
   const logWriter = new writers.DevConsoleWriter({
     formatter: new formatters.BlockFormatter()
   })
-  const writeLog = async (meta, ...args) =>
-    logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
   // subscribe to a category
-  log.on('info', writeLog)
+  log.on('info', logWriter.listen)
 
   // subscribe to multiple categories
   ;['trace', 'debug', 'info', 'warn', 'error', 'fatal'].forEach(
-    (category) => log.on(category, writeLog)
+    (category) => log.on(category, logWriter.listen)
   )
 
   // subscribe to an event
-  log.on('app_startup', writeLog)
+  log.on('app_startup', logWriter.listen)
 
   // subscribe to all events
-  log.on('*', writeLog)
+  log.on('*', logWriter.listen)
 
   // subscribe to events that have no subscriptions
-  log.on('no_listeners', writeLog)
+  log.on('no_listeners', logWriter.listen)
 
   log.emit('app_startup', 'info', { hello: 'world' })
-}
-
-// README - piping emitters
-const emitterPiping = async () => {
-  const log1 = new LogEmitter()
-  const log2 = new LogEmitter()
-  const log3 = new LogEmitter()
-  const logWriter = new writers.DevConsoleWriter({
-    formatter: new formatters.BlockFormatter()
-  })
-  const writeLog = async (meta, ...args) =>
-    logWriter.write(args && args.length === 1 ? args[0] : args, meta)
-
-  log2.on('*', log1.pipe())
-  log3.on('*', log1.pipe())
-  log1.on('info', writeLog)
-
-  log2.emit('log2', 'info', { hello: 'world' })
-  log3.emit('log3', 'info', { hello: 'world' })
 }
 
 // README - child emitters
@@ -474,10 +455,24 @@ const emitterChildren = async () => {
   const logWriter = new writers.DevConsoleWriter({
     formatter: new formatters.BlockFormatter()
   })
-  const writeLog = async (meta, ...args) =>
-    logWriter.write(args && args.length === 1 ? args[0] : args, meta)
 
-  log1.on('info', writeLog)
+  log1.on('info', logWriter.listen)
+  log2.emit('log2', 'info', { hello: 'world' })
+  log3.emit('log3', 'info', { hello: 'world' })
+}
+
+// README - piping emitters
+const emitterPiping = async () => {
+  const log1 = new LogEmitter()
+  const log2 = new LogEmitter()
+  const log3 = new LogEmitter()
+  const logWriter = new writers.DevConsoleWriter({
+    formatter: new formatters.BlockFormatter()
+  })
+
+  log2.on('*', log1.pipe())
+  log3.on('*', log1.pipe())
+  log1.on('info', logWriter.listen)
 
   log2.emit('log2', 'info', { hello: 'world' })
   log3.emit('log3', 'info', { hello: 'world' })
@@ -489,7 +484,10 @@ const emitterContext = async () => {
   const Router = require('koa-router')
 
   const appLogger = new LogEmitter()
-  appLogger.on('*', console.log)
+  const logWriter = new writers.StdoutWriter({
+    formatter: new formatters.SquashFormatter(),
+  })
+  appLogger.on('*', logWriter.listen)
 
   const app = new Koa()
   const router = new Router()
@@ -546,37 +544,59 @@ const rollYourLogWriter = async () => {
 }
 
 const tryWithMetrics = async () => {
-  const log = new LogEmitter()
+  const log = new LogEmitter({
+    // default timeout for latency measurement is 30 seconds
+    latencyTimeoutMs: 30000,
+    METRICS_CATEGORIES: {
+      WARN: {
+        CATEGORY: 'metrics_warn', // default is 'warn'
+        HELP: 'my override'
+      },
+      // COUNT: // same schema as WARN example
+      // COUNT_ERRORS: // same schema as WARN example
+      // GAUGE: // same schema as WARN example
+      // GAUGE_INCREASE: // same schema as WARN example
+      // GAUGE_DECREASE: // same schema as WARN example
+      // LATENCY_START: // same schema as WARN example
+      // LATENCY_END: // same schema as WARN example
+      // LATENCY: // same schema as WARN example
+    },
+  })
+  const logWriter = new writers.DevConsoleWriter({
+    formatter: new formatters.BlockFormatter(),
+  })
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-  const stubHandler = (meta, ...args) => console.log(meta, args[0])
 
   // counts the number of occurences of a given action
-  log.on('count', stubHandler)
+  log.on('count', logWriter.listen)
 
   // counts the number of errors that occur when executing a given action
-  log.on('count_errors', stubHandler)
+  log.on('count_errors', logWriter.listen)
 
   // tracks the number of a given action currently being executed
-  log.on('gauge', stubHandler)
+  log.on('gauge', logWriter.listen)
 
   // OR you can subscribe to gauge increase, and decrease separately
   // tracks an increase in the number of a given action currently beint executed
-  log.on('gauge_increase', stubHandler)
+  log.on('gauge_increase', logWriter.listen)
 
   // tracks an decrease in the number of a given action currently beint executed
-  log.on('gauge_decrease', stubHandler)
+  log.on('gauge_decrease', logWriter.listen)
 
   // tracks the beginning time of a given action
-  log.on('latency_start', stubHandler)
+  log.on('latency_start', logWriter.listen)
 
   // tracks the end time of a given action, and emits the latency event
-  log.on('latency_end', stubHandler)
+  log.on('latency_end', logWriter.listen)
 
   // measures the length of time it takes to complete a given action
-  log.on('latency', stubHandler)
+  // you can just subscribe to this, if you want the duration, and
+  // don't need to set a timer yourself
+  log.on('latency', logWriter.listen)
 
   // for events where this module encounters unexpected behavior
-  log.on('warn', stubHandler)
+  // i.e. latency timeouts
+  log.on('metrics_warn' /* 'warn' if you didn't override this */ , logWriter.listen)
 
   await log.tryWithMetrics({
     name: 'http_request',
@@ -613,8 +633,8 @@ const tryWithMetrics = async () => {
   await latencyLogEmitter()
   await logEmitter()
   await gettingStarted()
-  await emitterPiping()
   await emitterChildren()
+  await emitterPiping()
   await rollYourLogWriter()
   await tryWithMetrics()
 
