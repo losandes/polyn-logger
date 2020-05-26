@@ -34,6 +34,13 @@ function LogEmitterFactory (deps) {
         ...input,
         ...{ emitter: this },
       })
+
+      /**
+       * NodeJS' EventEmitter throws an Error if you emit 'error',
+       * and there are no subscriptions to 'error'. This doesn't
+       * make sense for a logger, so this noop circumvents that.
+       */
+      this.on('error', () => {})
     }
 
     __emitWith (meta, ...args) {

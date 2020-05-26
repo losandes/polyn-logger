@@ -1,6 +1,7 @@
 .DS_Store
 .gitignore
 .eslintrc
+.python-version
 screenshots
 CONTRIBUTING.md
 npm-debug.log

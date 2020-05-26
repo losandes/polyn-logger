@@ -114,5 +114,70 @@ module.exports = (test, dependencies) => {
         expect(actual.noSubscriberResults[0][0].time).to.be.a('number')
       },
     },
+    'when I emit an error event, and there are no subscriptions to "error"': {
+      when: (emitter) => emitter.emit('test', 'error', 'foo'),
+      'it should NOT throw an error, nor exit the process': (expect) => (err) => {
+        expect(err).to.equal(null)
+      },
+    },
+    'when I emit events from a child emitter': {
+      given: () => {
+        const parent = new LogEmitter()
+        const childContext = {
+          foo: 'foo',
+          bar: 'bar'
+        }
+        const grandChildContext = {
+          biz: 'biz'
+        }
+        const child = parent.child({ context: childContext })
+        const grandChild = child.child({
+          context: {
+            ...child.options.context,
+            ...grandChildContext
+          }
+        })
+
+        return { parent, child, grandChild, childContext, grandChildContext }
+      },
+      when: ({ parent, child, grandChild, childContext, grandChildContext }) => {
+        const events = []
+        const eventCategories = ['trace', 'info', 'warn', 'error', 'fatal']
+        parent.on('*', (...args) => events.push(args))
+        eventCategories.forEach((c) => {
+          child.emit('child', c, { hello: 'world' })
+          grandChild.emit('grandChild', c, { hello: 'world' })
+        })
+
+        return { events, eventCategories, childContext, grandChildContext }
+      },
+      'it should emit the event on the parent emitter': (expect) => (err, actual) => {
+        expect(err).to.equal(null)
+
+        const find = (event, category) => actual.events.find((e) =>
+          e[0].category === category &&
+          e[0].event === event
+        )
+
+        actual.eventCategories.forEach((c) => {
+          expect(find('child', c)).to.not.be.undefined
+          expect(find('grandChild', c)).to.not.be.undefined
+        })
+      },
+      'it should include the context from the child in the event': (expect) => (err, actual) => {
+        expect(err).to.equal(null)
+
+        actual.events.forEach((e) => {
+          if (e[0].event === 'child') {
+            expect(e[0].context).to.deep.equal(actual.childContext)
+          } else {
+            expect(e[0].context).to.deep.equal({
+              ...actual.childContext,
+              ...actual.grandChildContext
+            })
+          }
+        })
+      },
+    },
   })
 }
