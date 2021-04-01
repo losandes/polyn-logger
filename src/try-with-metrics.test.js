@@ -55,7 +55,7 @@ module.exports = (test, dependencies) => {
         const found = actual.results.find((r) => r.meta.category === METRICS_CATEGORIES.LATENCY.CATEGORY)
         expect(typeof found === 'undefined', 'should emit latency category').to.equal(false)
         expect(found.log.duration.milliseconds).to.be.greaterThan(actual.sleepTime)
-      }
+      },
     },
     'when an action exceeds the timeout': {
       given: () => ({ emitter: new LogEmitter({ latencyTimeoutMs: 5 }) }),
@@ -81,7 +81,7 @@ module.exports = (test, dependencies) => {
         expect(typeof found === 'undefined', 'should emit warn').to.equal(false)
         expect(found.log.message).to.equal('action_timed_out')
         expect(found.log.originalLog).to.be.a('object')
-      }
+      },
     },
     'when an action throws': {
       when: async ({ emitter }) => {

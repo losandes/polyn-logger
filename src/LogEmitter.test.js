@@ -125,17 +125,17 @@ module.exports = (test, dependencies) => {
         const parent = new LogEmitter()
         const childContext = {
           foo: 'foo',
-          bar: 'bar'
+          bar: 'bar',
         }
         const grandChildContext = {
-          biz: 'biz'
+          biz: 'biz',
         }
         const child = parent.child({ context: childContext })
         const grandChild = child.child({
           context: {
             ...child.options.context,
-            ...grandChildContext
-          }
+            ...grandChildContext,
+          },
         })
 
         return { parent, child, grandChild, childContext, grandChildContext }
@@ -156,7 +156,7 @@ module.exports = (test, dependencies) => {
 
         const find = (event, category) => actual.events.find((e) =>
           e[0].category === category &&
-          e[0].event === event
+          e[0].event === event,
         )
 
         actual.eventCategories.forEach((c) => {
@@ -173,7 +173,7 @@ module.exports = (test, dependencies) => {
           } else {
             expect(e[0].context).to.deep.equal({
               ...actual.childContext,
-              ...actual.grandChildContext
+              ...actual.grandChildContext,
             })
           }
         })

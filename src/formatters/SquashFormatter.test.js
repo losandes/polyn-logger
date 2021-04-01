@@ -45,10 +45,10 @@ module.exports = (test, dependencies) => {
             a: 'property',
             nest: {
               nest: {
-                nest: 'context'
-              }
-            }
-          }
+                nest: 'context',
+              },
+            },
+          },
         }
       }
 
@@ -80,7 +80,7 @@ module.exports = (test, dependencies) => {
           pid: 34143,
           time: 1580422939157,
           a: 'property',
-          nest_nest_nest: 'context'
+          nest_nest_nest: 'context',
         })
       },
       'it should convert the event into a level': (expect) => (err, result) => {
@@ -102,7 +102,7 @@ module.exports = (test, dependencies) => {
           pid: 34143,
           time: 1580422939157,
           a: 'property',
-          nest_nest_nest: 'context'
+          nest_nest_nest: 'context',
         })
       },
     },
@@ -127,7 +127,7 @@ module.exports = (test, dependencies) => {
           source: '/src/app-teams-calls/dist-test/compose.js',
           hostname: 'MACHINE_NAME',
           pid: 34143,
-          time: 1580422939157
+          time: 1580422939157,
         })
         expect(result.json.err_stack.indexOf('Error: BOOM!')).to.equal(0)
       },
@@ -267,7 +267,7 @@ module.exports = (test, dependencies) => {
           err_message: 'denied',
           err_status: 401,
           err_statusMessage: 'Access Denied',
-          err_cause1_message: 'BOOM!'
+          err_cause1_message: 'BOOM!',
         })
         expect(result.json.err_stack.indexOf('Error: denied')).to.equal(0)
         expect(result.json.err_cause1_stack.indexOf('Error: BOOM!')).to.equal(0)
@@ -361,7 +361,7 @@ module.exports = (test, dependencies) => {
             pid: 34143,
             time: 1580422939157,
             a: 'property',
-            nest_nest_nest: 'context'
+            nest_nest_nest: 'context',
           })
         },
       },

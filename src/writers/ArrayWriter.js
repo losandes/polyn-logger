@@ -29,7 +29,7 @@ module.exports = {
        * @param {any} args - log(s) to write
        */
       const listen = (meta, ...args) => write(
-        args && args.length === 1 ? args[0] : args, meta
+        args && args.length === 1 ? args[0] : args, meta,
       )
 
       return { history, maxSize, write, listen }
