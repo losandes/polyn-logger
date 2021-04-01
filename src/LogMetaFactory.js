@@ -46,7 +46,7 @@ function LogMetaFactory (deps) {
         throw new Error(`Invalid Event: expected ${value} to match ${EVENT_EXP_STR}`)
       }),
       level: required('number').from(({ output }) =>
-        typeof levels[output.category] === 'number' ? levels[output.category] : 10
+        typeof levels[output.category] === 'number' ? levels[output.category] : 10,
       ),
       source: optional('string').withDefault(DEFAULT_SOURCE),
       hostname: optional('string').withDefault(HOST_NAME),

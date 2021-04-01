@@ -32,7 +32,7 @@ function LoggerFactory (deps) {
     source: 'string?',
     hostname: 'string?',
     pid: 'number?',
-    defaultMode: optional(/^(publish|emit)$/).withDefault('publish')
+    defaultMode: optional(/^(publish|emit)$/).withDefault('publish'),
   })
 
   /**
@@ -103,12 +103,12 @@ function LoggerFactory (deps) {
     })
 
     log.publish = (event, body) => _log(logTopic.publish)(event)(body)
-    log.emit =    (event, body) => _log(logTopic.emit)(event)(body)
+    log.emit = (event, body) => _log(logTopic.emit)(event)(body)
 
     return { name: options.name, withSource, subscribe, unsubscribe, log }
   }
 
-  return { Logger}
+  return { Logger }
 }
 
 module.exports = LoggerFactory

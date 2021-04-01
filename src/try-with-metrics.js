@@ -90,10 +90,10 @@ function TryWithMetricsFactory (deps) {
         timeout: setTimeout(() => {
           emitter.emit(meta.event, METRICS_CATEGORIES.WARN.CATEGORY, {
             message: 'action_timed_out',
-            originalLog: { log, meta }
+            originalLog: { log, meta },
           })
           removeTimeout(meta, log)
-        }, latencyTimeoutMs)
+        }, latencyTimeoutMs),
       }
     }
 
@@ -125,7 +125,7 @@ function TryWithMetricsFactory (deps) {
           ...{
             duration,
             help: METRICS_CATEGORIES.LATENCY.HELP,
-          }
+          },
         })
       }
     })

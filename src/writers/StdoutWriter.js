@@ -8,7 +8,7 @@ module.exports = {
       validateFormatter(options)
       const { format } = options.formatter
 
-     /**
+      /**
        * Writes the output to an array (Logger)
        * @param {any} log - the log to write
        * @param {LogMeta} meta - the log metadata
@@ -24,9 +24,8 @@ module.exports = {
        * @param {any} args - log(s) to write
        */
       const listen = (meta, ...args) => write(
-        args && args.length === 1 ? args[0] : args, meta
+        args && args.length === 1 ? args[0] : args, meta,
       )
-
 
       return { write, listen }
     }
