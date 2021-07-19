@@ -337,7 +337,7 @@ Some log utilities don't like OOP / nested objects. The SquashFormatter merges t
 new StdoutWriter({ formatter: new SquashFormatter() })
 ```
 
-![squash-formatter-stdout-writer](squash-formatter-stdout-writer.png)
+![squash-formatter-stdout-writer](screenshots/squash-formatter-stdout-writer.png)
 
 ### The bunyan formatter
 
