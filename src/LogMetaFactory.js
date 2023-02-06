@@ -8,14 +8,18 @@ function LogMetaFactory (deps) {
 
   const { optional, required } = deps.blueprint
   const { immutable } = deps.immutable
-  const { os } = deps
+  // const { os } = deps // os is accessed as a qualified property of deps
 
   const LogMetaFactory = (options) => {
     const { events, hostname, pid } = options
     const EVENT_EXP_STR = Array.isArray(events) ? `^(${events.join('|')})$` : /^[A-Za-z0-9_.]$/
     const EVENT_EXP = new RegExp(EVENT_EXP_STR)
     const DEFAULT_SOURCE = 'GLOBAL'
-    const HOST_NAME = hostname || (typeof os !== 'undefined' ? os.hostname() : 'local')
+    const HOST_NAME = hostname || (
+      typeof deps.os !== 'undefined' && typeof deps.os.hostname === 'function'
+      ? deps.os.hostname() 
+      : 'local'
+    )
     const PID = pid || (typeof process !== 'undefined' ? process.pid : 0)
     const isValidEvent = typeof options.isValidEvent === 'function'
       ? options.isValidEvent
