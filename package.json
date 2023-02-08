@@ -1,6 +1,6 @@
 {
   "name": "@polyn/logger",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "An async, event based logger for NodeJS",
   "main": "index.js",
   "types": "index.d.ts",
