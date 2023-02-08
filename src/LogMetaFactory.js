@@ -17,8 +17,8 @@ function LogMetaFactory (deps) {
     const DEFAULT_SOURCE = 'GLOBAL'
     const HOST_NAME = hostname || (
       typeof deps.os !== 'undefined' && typeof deps.os.hostname === 'function'
-      ? deps.os.hostname() 
-      : 'local'
+        ? deps.os.hostname()
+        : 'local'
     )
     const PID = pid || (typeof process !== 'undefined' ? process.pid : 0)
     const isValidEvent = typeof options.isValidEvent === 'function'
