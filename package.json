@@ -2,42 +2,48 @@
   "name": "@polyn/logger",
   "version": "0.5.3",
   "description": "An async, event based logger for NodeJS",
-  "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    "import": "./index-wrapper.mjs",
+    "require": "./index.cjs",
+    "default": "./index.cjs"
+  },
   "scripts": {
-    "pre-push": "npm test && node pre-push.js",
     "lint": "eslint ./src",
     "lint:fix": "eslint ./src --fix",
-    "test": "node test.js -r nyan && npm run test:ts -- -r nyan",
+    "test": "node test.js -r nyan ",
+    "test:ci": "node test.js -r tap,summary --no-color",
+    "test:all": "pnpm run test:ts; pnpm run test:mjs; pnpm test:ci",
     "test:ts": "tsc -p ./tsconfig.json && node ./examples-typescript.js",
-    "test:coverage": "nyc node test.js",
-    "test:coverage:ci": "mkdir ./coverage && touch ./coverage/lcov.info && npm run test:ts -- -r tap && nyc node test.js -r tap,summary && nyc report --reporter=text-lcov > ./coverage/lcov.info"
+    "test:mjs": "node ./examples-esmodule.mjs",
+    "test:coverage": "nyc --reporter=text --reporter=text-summary pnpm run test:ci",
+    "test:coverage:ci": "mkdir -p ./coverage && touch ./coverage/lcov.info; pnpm run test:ts; pnpm run test:mjs; pnpm run test:coverage; nyc report --reporter=text-lcov > ./coverage/lcov.info"
   },
   "pre-push": [
-    "pre-push"
+    "lint",
+    "test:ci"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@polyn/async-events": "~0.3.1",
-    "@polyn/blueprint": "~2.6.0",
-    "@polyn/immutable": "~1.0.11"
+    "@polyn/blueprint": "^2.6.0",
+    "@polyn/immutable": "^1.0.11"
   },
   "devDependencies": {
     "@polyn/logger": "link:",
-    "@types/node": "~14.14.37",
+    "@types/node": "~14.14.45",
     "bunyan": "~1.8.15",
-    "chai": "~4.3.4",
+    "chai": "~4.3.7",
     "eslint": "~7.23.0",
-    "eslint-config-standard": "~16.0.2",
+    "eslint-config-standard": "~16.0.3",
     "eslint-plugin-import": "~2.22.1",
     "eslint-plugin-node": "~11.1.0",
     "eslint-plugin-promise": "~4.3.1",
-    "koa": "~2.13.1",
+    "koa": "~2.13.4",
     "koa-router": "~10.0.0",
     "nyc": "~15.1.0",
-    "pre-push": "~0.1.1",
-    "supposed": "~1.1.0",
-    "typescript": "~4.2.3"
+    "pre-push": "~0.1.4",
+    "supposed": "~1.1.6",
+    "typescript": "~4.2.4"
   }
 }

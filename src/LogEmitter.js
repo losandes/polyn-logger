@@ -1,16 +1,18 @@
 /**
- * @param {@polyn/blueprint} blueprint
- * @param {@polyn/immutable} immutable
- * @param {LogMetaFactory} LogMetaFactory
- * @param {events} EventEmitter
- * @param {Function} makeTryWithMetrics
+ * @param {{
+ *   blueprint: import('@polyn/blueprint')
+ *   immutable: import('@polyn/immutable')
+ *   LogMetaFactory: import('..').LogMetaFactory
+ *   EventEmitter: import('events')
+ *   makeTryWithMetrics: function
+ * }} dependencies
  */
-function LogEmitterFactory (deps) {
+function LogEmitterFactory (dependencies) {
   'use strict'
 
-  const { optional } = deps.blueprint
-  const { immutable } = deps.immutable
-  const { LogMetaFactory, EventEmitter, makeTryWithMetrics } = deps
+  const { optional } = dependencies.blueprint
+  const { immutable } = dependencies.immutable
+  const { LogMetaFactory, EventEmitter, makeTryWithMetrics } = dependencies
   const TAB_AT_EXP = /^(\s+)at /
 
   const LogEmitterOptions = immutable('LogEmitterOptions', {
@@ -23,15 +25,15 @@ function LogEmitterFactory (deps) {
   })
 
   class LogEmitter extends EventEmitter {
-    constructor (input) {
-      super(input)
-      this.options = new LogEmitterOptions(input)
+    constructor (options) {
+      super(options)
+      this.options = new LogEmitterOptions(options)
       this.LogMeta = LogMetaFactory({
         ...{ isValidEvent: () => true },
         ...this.options,
       })
       this.tryWithMetrics = makeTryWithMetrics({
-        ...input,
+        ...options,
         ...{ emitter: this },
       })
 
