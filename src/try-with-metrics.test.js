@@ -10,7 +10,7 @@ module.exports = (test, dependencies) => {
       when: async ({ emitter }) => {
         const results = []
         const categories = []
-        const sleepTime = 5
+        const sleepTime = 6
         const expected = {
           name: 'io',
           labels: { a: 'label' },
@@ -54,7 +54,7 @@ module.exports = (test, dependencies) => {
         expect(err).to.equal(null)
         const found = actual.results.find((r) => r.meta.category === METRICS_CATEGORIES.LATENCY.CATEGORY)
         expect(typeof found === 'undefined', 'should emit latency category').to.equal(false)
-        expect(found.log.duration.milliseconds).to.be.greaterThan(actual.sleepTime)
+        expect(found.log.duration.milliseconds).to.be.greaterThan(actual.sleepTime - 1) // sleep time is approximate, so subtract one in case it runs sooner than expected
       },
     },
     'when an action exceeds the timeout': {
