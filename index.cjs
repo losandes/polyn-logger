@@ -1,6 +1,5 @@
 const EventEmitter = require('events')
 const os = require('os')
-const asyncEvents = require('@polyn/async-events')
 const blueprint = require('@polyn/blueprint')
 const immutable = require('@polyn/immutable')
 
@@ -25,7 +24,6 @@ const formatters = {
 }
 
 // writers
-const { validateWriter } = require('./src/writers/validate-writer').factory(blueprint)
 const { ArrayWriter } = require('./src/writers/ArrayWriter').factory(validateFormatter)
 const { ConsoleWriter } = require('./src/writers/ConsoleWriter').factory(validateFormatter)
 const { DevConsoleWriter } = require('./src/writers/DevConsoleWriter').factory(validateFormatter)
@@ -50,13 +48,6 @@ const { makeTryWithMetrics, METRICS_CATEGORIES } = require('./src/try-with-metri
 
 // logger
 const { LogMetaFactory } = require('./src/LogMetaFactory')({ blueprint, immutable, os })
-const { Logger } = require('./src/Logger')({
-  blueprint,
-  immutable,
-  asyncEvents,
-  LogMetaFactory,
-  validateWriter,
-})
 const { LogEmitter } = require('./src/LogEmitter')({
   blueprint,
   immutable,
@@ -66,7 +57,6 @@ const { LogEmitter } = require('./src/LogEmitter')({
 })
 
 module.exports = {
-  Logger,
   formatters,
   writers,
   LogEmitter,

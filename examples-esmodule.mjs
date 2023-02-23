@@ -1,4 +1,8 @@
-import { LogEmitter, ILogWriter, formatters, writers, ILogEmitterMeta } from '@polyn/logger';
+import {
+  LogEmitter,
+  formatters,
+  writers,
+} from '@polyn/logger'
 
 const {
   BlockFormatter,
@@ -15,18 +19,19 @@ const {
   StdoutWriter,
 } = writers
 
-const events = ['local2', 'local', 'trace', 'debug', 'info', 'warn', 'error', 'fatal']
+const events = ['local2',
+  'local', 'trace', 'debug', 'info', 'warn', 'error', 'fatal']
 const arrayWriter = new ArrayWriter({ formatter: new StringFormatter() })
 
 const customWriter = function () {
-  const write = async (log: any, meta: ILogEmitterMeta) => {
+  const write = async (log, meta) => {
     // format the log
 
     // write the log
     console.log('CUSTOM:', log, meta)
   }
 
-  const listen = (meta: ILogEmitterMeta, ...args: any) => write(
+  const listen = (meta, ...args) => write(
     args && args.length === 1 ? args[0] : args, meta,
   )
 
@@ -35,18 +40,18 @@ const customWriter = function () {
 
 const ciWriter = function () {
   const writer = new StdoutWriter({ formatter: new StringFormatter() })
-  const write = async (log: any, meta: ILogEmitterMeta) => {
+  const write = async (log, meta) => {
     writer.write({ ...log, ...meta }, meta)
   }
 
-  const listen = (meta: ILogEmitterMeta, ...args: any) => write(
+  const listen = (meta, ...args) => write(
     args && args.length === 1 ? args[0] : args, meta,
   )
 
   return { write, listen }
 }
 
-const _writers: ILogWriter[] = [
+const _writers = [
   /* 0 */ new DevConsoleWriter({ formatter: new BlockFormatter() }),
   /* 1 */ new DevConsoleWriter({ formatter: new BlockFormatter({ useColors: false }) }),
   /* 2 */ new ConsoleWriter({ formatter: new PassThroughFormatter() }),
@@ -61,7 +66,7 @@ const _writers: ILogWriter[] = [
 ;(() => {
   const logger = new LogEmitter()
 
-  events.forEach((event: string) => {
+  events.forEach((event) => {
     logger.on(event, _writers[8].listen)
   })
 
