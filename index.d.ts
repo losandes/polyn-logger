@@ -33,6 +33,7 @@ export interface ILogFormatter {
 
 export interface ILogWriter {
   write (log: any, meta: ILogMeta): Promise<void>;
+  listen (meta: ILogMeta, ...args: any): Promise<void>;
 }
 
 export interface ILoggerOptions {
@@ -139,23 +140,51 @@ declare namespace writers {
       maxSize?: number;
     });
     write (log: any, meta: ILogMeta): Promise<void>;
+    listen (meta: ILogMeta, ...args: any): Promise<void>;
   }
   export class ConsoleWriter implements ILogWriter {
     constructor(options: { formatter: ILogFormatter });
     write (log: any, meta: ILogMeta): Promise<void>;
+    listen (meta: ILogMeta, ...args: any): Promise<void>;
   }
   export class DevConsoleWriter implements ILogWriter {
     constructor(options: { formatter: ILogFormatter });
     write (log: any, meta: ILogMeta): Promise<void>;
+    listen (meta: ILogMeta, ...args: any): Promise<void>;
   }
   export class StdoutWriter implements ILogWriter {
     constructor(options: { formatter: ILogFormatter });
     write (log: any, meta: ILogMeta): Promise<void>;
+    listen (meta: ILogMeta, ...args: any): Promise<void>;
   }
 }
 
-declare class LogEmitter extends EventEmitter {
-  constructor(options: ILogEmitterOptions | any);
+export interface ILogEmitter extends EventEmitter {
+  emit(event: string | symbol, level: string, ...args: any[]): boolean;
+  pipe(meta: ILogEmitterMeta, ...args: any[]): boolean;
+  child(options: ILogEmitterOptions): LogEmitter;
+  tryWithMetrics(options: ITryWithMetricsOptions): (action: Promise<any>) => Promise<any>;
+}
+
+/**
+ * This is a copy of NodeJS' interface which they didn't export
+ * for some reason. Using a copy risks falling out of sync with NodeJS
+ * so the constructor for LogEmitter accepts `options?: ILogEmitterOptions | any | undefined`
+ * instead of `options?: ILogEmitterOptions | EventEmitterOptions | undefined`.
+ *
+ * This copy is here for posterity... so you can see an example of the
+ * base class options that you could pass through with your options
+ * @see https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/node/events.d.ts
+ */
+interface EventEmitterOptions {
+  /**
+   * Enables automatic capturing of promise rejection.
+   */
+  captureRejections?: boolean | undefined;
+}
+
+declare class LogEmitter extends EventEmitter implements ILogEmitter {
+  constructor(options?: ILogEmitterOptions | any | undefined);
   emit(event: string | symbol, level: string, ...args: any[]): boolean;
   pipe(meta: ILogEmitterMeta, ...args: any[]): boolean;
   child(options: ILogEmitterOptions): LogEmitter;
