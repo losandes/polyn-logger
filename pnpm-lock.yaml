@@ -1,8 +1,8 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@polyn/blueprint': ^2.6.0
-  '@polyn/immutable': ^1.0.11
+  '@polyn/blueprint': ~2.7.0
+  '@polyn/immutable': ~1.1.2
   '@polyn/logger': 'link:'
   '@types/node': ~14.14.45
   bunyan: ~1.8.15
@@ -20,8 +20,8 @@ specifiers:
   typescript: ~4.2.4
 
 dependencies:
-  '@polyn/blueprint': 2.6.0
-  '@polyn/immutable': 1.0.11_@polyn+blueprint@2.6.0
+  '@polyn/blueprint': 2.7.0
+  '@polyn/immutable': 1.1.2_@polyn+blueprint@2.7.0
 
 devDependencies:
   '@polyn/logger': 'link:'
@@ -322,16 +322,16 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
 
-  /@polyn/blueprint/2.6.0:
-    resolution: {integrity: sha512-8WFzs2G8IVCuTGtO8NBbn7yiIwdZIac5/9QrqSdEA8Jobum/k0sHERbO2ayrl655svMDBIR3IeDC9mIAw1NEzA==}
+  /@polyn/blueprint/2.7.0:
+    resolution: {integrity: sha512-stT0ZnqUoD4MvH1p6mzXiX7R8z0WlJGjNnC8IQMMZwzpTEfgLzH5SE2JpHEKXr58qW93fc3SUFJaxCHuBNe42g==}
     dev: false
 
-  /@polyn/immutable/1.0.11_@polyn+blueprint@2.6.0:
-    resolution: {integrity: sha512-MN/O+Sver1PCxqcF9e5VMPUFrXutCA4oz1of5NT7R4vkkfQTkBfK3ndXHLC3ocXmDWLVIFWzowA/j88Dum0+Eg==}
+  /@polyn/immutable/1.1.2_@polyn+blueprint@2.7.0:
+    resolution: {integrity: sha512-LLJQvL0aFwsqTyPQK8scqcJ4Jb5W+UJqBw9ZwJO9hTIO96CSRy3Qo9Ia8Wo240T4NQt9ysaT3e9MBRQdGsOh6A==}
     peerDependencies:
-      '@polyn/blueprint': 2.6.0
+      '@polyn/blueprint': 2.7.0
     dependencies:
-      '@polyn/blueprint': 2.6.0
+      '@polyn/blueprint': 2.7.0
     dev: false
 
   /@types/json5/0.0.29:

@@ -33,8 +33,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@polyn/blueprint": "^2.6.0",
-    "@polyn/immutable": "^1.0.11"
+    "@polyn/blueprint": "~2.7.0",
+    "@polyn/immutable": "~1.1.2"
   },
   "devDependencies": {
     "@polyn/logger": "link:",
