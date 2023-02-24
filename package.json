@@ -9,15 +9,22 @@
     "default": "./index.cjs"
   },
   "scripts": {
-    "lint": "eslint ./src",
-    "lint:fix": "eslint ./src --fix",
-    "test": "node test.js -r nyan ",
-    "test:ci": "node test.js -r tap,summary --no-color",
-    "test:all": "pnpm run test:ts; pnpm run test:mjs; pnpm test:ci",
+    "// lint": "json comment =============================================",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "// test": "json comment =============================================",
+    "test": "pnpm run test:ts && pnpm run test:cjs && pnpm run test:mjs:default && pnpm run test:mjs:exports",
+    "test:ci": "pnpm run test:ts && pnpm run test:mjs:default:ci && pnpm run test:mjs:exports:ci && pnpm run test:coverage",
+    "test:cjs": "node test.cjs -r nyan",
+    "test:cjs:ci": "node test.cjs -r tap,summary --no-color",
+    "test:mjs:default": "node test-default.mjs -r nyan",
+    "test:mjs:default:ci": "node test-default.mjs -r tap,summary --no-color",
+    "test:mjs:exports": "node test-exports.mjs -r nyan",
+    "test:mjs:exports:ci": "node test-exports.mjs -r tap,summary --no-color",
     "test:ts": "tsc -p ./tsconfig.json && node ./examples-typescript.js",
-    "test:mjs": "node ./examples-esmodule.mjs",
-    "test:coverage": "nyc --reporter=text --reporter=text-summary pnpm run test:ci",
-    "test:coverage:ci": "mkdir -p ./coverage && touch ./coverage/lcov.info; pnpm run test:ts; pnpm run test:mjs; pnpm run test:coverage; nyc report --reporter=text-lcov > ./coverage/lcov.info"
+    "// coverage": "json comment =============================================",
+    "test:coverage": "nyc --reporter=text --reporter=text-summary pnpm run test:cjs:ci",
+    "test:coverage:ci": "mkdir -p ./coverage && touch ./coverage/lcov.info; nyc report --reporter=text-lcov > ./coverage/lcov.info"
   },
   "pre-push": [
     "lint",
@@ -26,8 +33,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@polyn/blueprint": "^2.6.0",
-    "@polyn/immutable": "^1.0.11"
+    "@polyn/blueprint": "~2.7.0",
+    "@polyn/immutable": "~1.1.2"
   },
   "devDependencies": {
     "@polyn/logger": "link:",
