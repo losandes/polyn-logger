@@ -80,6 +80,9 @@ export interface ILogWriter {
 
 declare namespace writers {
   export class ArrayWriter implements ILogWriter {
+    history: any[];
+    maxSize: number;
+
     constructor(options: {
       formatter: ILogFormatter;
       history?: any[];
