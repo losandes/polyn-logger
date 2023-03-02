@@ -14,7 +14,7 @@
     "lint:fix": "eslint . --fix",
     "// test": "json comment =============================================",
     "test": "pnpm run test:ts && pnpm run test:cjs && pnpm run test:mjs:default && pnpm run test:mjs:exports",
-    "test:ci": "pnpm run test:ts && pnpm run test:mjs:default:ci && pnpm run test:mjs:exports:ci && pnpm run test:coverage",
+    "test:ci": "pnpm run test:ts && pnpm run test:mjs:default:ci && pnpm run test:mjs:exports:ci && pnpm run test:coverage:ci",
     "test:cjs": "node test.cjs -r nyan",
     "test:cjs:ci": "node test.cjs -r tap,summary --no-color",
     "test:mjs:default": "node test-default.mjs -r nyan",
@@ -23,15 +23,36 @@
     "test:mjs:exports:ci": "node test-exports.mjs -r tap,summary --no-color",
     "test:ts": "tsc -p ./tsconfig.json && node ./examples-typescript.js",
     "// coverage": "json comment =============================================",
-    "test:coverage": "nyc --reporter=text --reporter=text-summary pnpm run test:cjs:ci",
-    "test:coverage:ci": "mkdir -p ./coverage && touch ./coverage/lcov.info; nyc report --reporter=text-lcov > ./coverage/lcov.info"
+    "test:coverage:ci": "c8 --reporter=text --reporter=text-summary pnpm run test:cjs:ci",
+    "coverage:ci": "mkdir -p ./coverage && touch ./coverage/lcov.info; c8 report --reporter=text-lcov > ./coverage/lcov.info"
   },
   "pre-push": [
     "lint",
     "test:ci"
   ],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/losandes/polyn-logger.git"
+  },
+  "author": "Andy Wright <andes.collab@gmail.com> (https://github.com/losandes)",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/losandes/polyn-logger/issues"
+  },
+  "homepage": "https://github.com/losandes/polyn-logger#readme",
+  "keywords": [
+    "logger",
+    "logs",
+    "logging",
+    "EventEmitter",
+    "events",
+    "pubsub",
+    "metrics",
+    "histogram",
+    "gauge",
+    "latency",
+    "bunyan"
+  ],
   "dependencies": {
     "@polyn/blueprint": "~2.7.0",
     "@polyn/immutable": "~1.1.2"
@@ -40,6 +61,7 @@
     "@polyn/logger": "link:",
     "@types/node": "~14.14.45",
     "bunyan": "~1.8.15",
+    "c8": "^7.13.0",
     "chai": "~4.3.7",
     "eslint": "~7.23.0",
     "eslint-config-standard": "~16.0.3",
@@ -48,7 +70,6 @@
     "eslint-plugin-promise": "~4.3.1",
     "koa": "~2.13.4",
     "koa-router": "~10.0.0",
-    "nyc": "~15.1.0",
     "pre-push": "~0.1.4",
     "supposed": "~1.1.6",
     "typescript": "~4.2.4"
